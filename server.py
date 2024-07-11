@@ -20,22 +20,74 @@
 """An HTTP service that renders chess board images"""
 
 import argparse
-import asyncio
 import aiohttp.web
 import chess
 import chess.svg
 import cairosvg
 import json
 import os
-import re
+import random
+import colorsys
 
 
 def load_theme(name):
     with open(os.path.join(os.path.dirname(__file__), f"{name}.json")) as f:
         return json.load(f)
 
-
 THEMES = {name: load_theme(name) for name in ["wikipedia", "lichess-blue", "lichess-brown"]}
+
+
+# Function to generate a random color
+def generate_random_color():
+    h = random.random()
+    s = random.uniform(0.5, 1.0)
+    v = random.uniform(0.5, 1.0)
+    return colorsys.hsv_to_rgb(h, s, v)
+
+
+# Function to convert RGB to HEX
+def rgb_to_hex(rgb):
+    return "#{:02x}{:02x}{:02x}".format(
+        int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255)
+    )
+
+
+# Function to adjust brightness
+def adjust_brightness(color, factor):
+    h, s, v = colorsys.rgb_to_hsv(color[0], color[1], color[2])
+    v = max(0, min(1, v * factor))
+    return colorsys.hsv_to_rgb(h, s, v)
+
+
+# Function to shift hue
+def shift_hue(color, shift):
+    h, s, v = colorsys.rgb_to_hsv(color[0], color[1], color[2])
+    h = (h + shift) % 1.0
+    return colorsys.hsv_to_rgb(h, s, v)
+
+
+# Function to generate a color scheme
+def generate_color_scheme():
+    light_square_color = generate_random_color()
+    dark_square_color = adjust_brightness(
+        light_square_color, 0.7
+    )  # Darker than light square
+
+    light_lastmove_color = shift_hue(
+        light_square_color, 0.1
+    )  # Shift hue slightly for distinction
+    dark_lastmove_color = shift_hue(
+        dark_square_color, 0.1
+    )  # Shift hue slightly for distinction
+
+    color_scheme = {
+        "square light": rgb_to_hex(light_square_color),
+        "square dark": rgb_to_hex(dark_square_color),
+        "square light lastmove": rgb_to_hex(light_lastmove_color),
+        "square dark lastmove": rgb_to_hex(dark_lastmove_color),
+    }
+
+    return color_scheme
 
 
 class Service:
@@ -82,7 +134,10 @@ class Service:
         coordinates = request.query.get("coordinates", "0") in ["", "1", "true", "True", "yes"]
 
         try:
-            colors = THEMES[request.query.get("colors", "lichess-brown")]
+            if request.query.get('colors') == 'random':
+                colors = generate_color_scheme()
+            else:
+              colors = THEMES[request.query.get("colors", "lichess-brown")]
         except KeyError:
             raise aiohttp.web.HTTPBadRequest(reason="theme colors not found")
 
