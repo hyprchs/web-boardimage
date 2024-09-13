@@ -21,20 +21,93 @@
 
 import argparse
 import aiohttp.web
+
 import chess
-import chess.svg
+import chess.svg as svg
+
 import cairosvg
 import json
 import os
 import random
 import colorsys
+from collections import deque
+import re
+
+
+def split_not_in_quotes(
+    s: str, delim: str = " ", quotes: list[tuple[str, str]] | None = None
+) -> list[str]:
+    """
+    Split a string on a delimeter if the delimeter is not inside a pair of quotes.
+    """
+    if quotes is None:
+        quotes = [('"', '"'), ("'", "'")]
+
+    # Validate that the 'quotes' are all 1 character long
+    assert all(
+        len(q[0]) == 1 and len(q[1]) == 1 for q in quotes
+    ), "All quotes must be exactly 1 character long"
+
+    # Loop through the string and keep track of whether we are inside a quoted string using a stack
+    stack = deque()
+    splits = []
+    current_split = []
+
+    for char in s:
+        if not stack and char == delim:
+            splits.append("".join(current_split))
+            current_split = []
+        else:
+            current_split.append(char)
+
+        if stack and char == stack[-1]:
+            stack.pop()
+        elif not stack:
+            for open_quote, close_quote in quotes:
+                if char == open_quote:
+                    stack.append(close_quote)
+                    break
+
+    # Add the last split
+    if current_split:
+        splits.append("".join(current_split))
+
+    return splits
+
+
+def deduplicate_svg_attrs(svg_string: str) -> str:
+    """Deduplicate the attributes in the outer `<svg>` tag in the given SVG string."""
+
+    # We just want to match the very first <svg> opening tag, ex:
+    # <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 45 45">
+    # Then we do a simple string manipulation to remove duplicate attributes
+    PAT = re.compile(r"<svg ?([^>]*)>")
+    svg_attrs = re.match(PAT, svg_string).group(1)
+
+    # We shouldn't assume the attributes' values are always the same even if the attribute names are the same.
+    # However, if there are two attributes with the same name, the one that will be used is the last one, so
+    # as we iterate through the attrs, we can always overwrite the previous value.
+    attrs = {}
+    for attr in split_not_in_quotes(svg_attrs):
+        key, value = attr.split("=", 1)
+        attrs[key] = value
+
+    # Reconstruct the attributes string
+    new_attrs = " ".join([f"{key}={value}" for key, value in attrs.items()])
+    return re.sub(PAT, f"<svg {new_attrs}>", svg_string, count=1)
+
+THIS_DIR = os.path.dirname(__file__)
+PIECE_SETS = os.listdir(os.path.join(THIS_DIR, "piece_png"))
 
 
 def load_theme(name):
-    with open(os.path.join(os.path.dirname(__file__), f"{name}.json")) as f:
+    with open(os.path.join(THIS_DIR, f"{name}.json")) as f:
         return json.load(f)
 
-THEMES = {name: load_theme(name) for name in ["wikipedia", "lichess-blue", "lichess-brown"]}
+
+THEMES = {
+    name: load_theme(name) for name in ["wikipedia", "lichess-blue", "lichess-brown"]
+}
 
 
 # Function to generate a random color
@@ -120,39 +193,74 @@ class Service:
             raise aiohttp.web.HTTPBadRequest(reason="check is not a valid square name")
 
         try:
-            arrows = [chess.svg.Arrow.from_pgn(s.strip()) for s in request.query.get("arrows", "").split(",") if s.strip()]
+            arrows = [
+                svg.Arrow.from_pgn(s.strip())
+                for s in request.query.get("arrows", "").split(",")
+                if s.strip()
+            ]
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid arrow")
 
         try:
-            squares = chess.SquareSet(chess.parse_square(s.strip()) for s in request.query.get("squares", "").split(",") if s.strip())
+            squares = chess.SquareSet(
+                chess.parse_square(s.strip())
+                for s in request.query.get("squares", "").split(",")
+                if s.strip()
+            )
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid squares")
 
         flipped = request.query.get("orientation", "white") == "black"
 
-        coordinates = request.query.get("coordinates", "0") in ["", "1", "true", "True", "yes"]
+        AFFIRMATIVE_STRS = [
+            "1",
+            "true",
+            "True",
+            "yes",
+        ]
+
+        coordinates = request.query.get("coordinates", "0") in AFFIRMATIVE_STRS
 
         try:
-            if request.query.get('colors') == 'random':
+            if request.query.get("colors") == "random":
                 colors = generate_color_scheme()
             else:
-              colors = THEMES[request.query.get("colors", "lichess-brown")]
+                colors = THEMES[request.query.get("colors", "lichess-brown")]
         except KeyError:
             raise aiohttp.web.HTTPBadRequest(reason="theme colors not found")
 
-        return chess.svg.board(board,
-                               coordinates=coordinates,
-                               flipped=flipped,
-                               lastmove=lastmove,
-                               check=check,
-                               arrows=arrows,
-                               squares=squares,
-                               size=size,
-                               colors=colors)
+        try:
+            if request.query.get("pieceSet") == "random":
+                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
+                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
+                else:
+                    piece_set = random.choice(PIECE_SETS)
+            else:
+                piece_set = request.query.get("pieceSet", "merida")
+                if piece_set not in PIECE_SETS:
+                    raise ValueError
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+
+        return deduplicate_svg_attrs(
+            svg.board(
+                board,
+                coordinates=coordinates,
+                flipped=flipped,
+                lastmove=lastmove,
+                check=check,
+                arrows=arrows,
+                squares=squares,
+                size=size,
+                colors=colors,
+                piece_set=piece_set,
+            )
+        )
 
     async def render_svg(self, request):
-        return aiohttp.web.Response(text=self.make_svg(request), content_type="image/svg+xml")
+        return aiohttp.web.Response(
+            text=self.make_svg(request), content_type="image/svg+xml"
+        )
 
     async def render_png(self, request):
         svg_data = self.make_svg(request)
@@ -163,7 +271,9 @@ class Service:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", "-p", type=int, default=8080, help="web server port")
-    parser.add_argument("--bind", default="127.0.0.1", help="bind address (default: 127.0.0.1)")
+    parser.add_argument(
+        "--bind", default="127.0.0.1", help="bind address (default: 127.0.0.1)"
+    )
     args = parser.parse_args()
 
     app = aiohttp.web.Application()

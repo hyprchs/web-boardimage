@@ -5,7 +5,7 @@ verify_ssl = true
 
 [packages]
 aiohttp = "~=3.9.5"
-chess = "~=1.10.0"
+# chess = "~=1.10.0"
 CairoSVG = "~=2.7.1"
 
 [scripts]
