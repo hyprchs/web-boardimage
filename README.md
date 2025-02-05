@@ -37,6 +37,7 @@ name | type | default | description
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `random` (generate one on the fly)
+**pieceSet** | string | required | Piece set, e.g., `merida`, `alpha`, `leipzig`
 
 ```
 https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/PpP5/6PK/8/8&lastMove=f4g6&check=h8&arrows=Ge6g8,Bh7&squares=a3,c3
@@ -45,6 +46,17 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 ![example board image](https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/PpP5/6PK/8/8&lastMove=f4g6&check=h8&arrows=Ge6g8,Bh7&squares=a3,c3)
 
 ### `GET /board.png` render a PNG
+
+### `GET /piece.svg` render a SVG
+
+name | type | default | description
+--- | --- | --- | ---
+**pieceType** | string | required | Piece: `p`, `n`, `b`, `r`, `q`, `k`
+**pieceSet** | string | required | Piece set, e.g., `merida`, `alpha`, `leipzig`
+**color** | string | required | `white` or `black`
+**size** | int | required | The width and height of the bounding-box/image/square
+
+### `GET /piece.png` render a PNG
 
 License
 -------
