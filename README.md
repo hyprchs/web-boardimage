@@ -37,7 +37,7 @@ name | type | default | description
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `random` (generate one on the fly)
-**pieceSet** | string | required | Piece set, e.g., `merida`, `alpha`, `leipzig`
+**pieceSet** | string | required | Piece set, e.g., `merida`, `alpha`, `leipzig`, `random` (generate one on the fly)
 
 ```
 https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/PpP5/6PK/8/8&lastMove=f4g6&check=h8&arrows=Ge6g8,Bh7&squares=a3,c3
@@ -45,18 +45,44 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 
 ![example board image](https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/PpP5/6PK/8/8&lastMove=f4g6&check=h8&arrows=Ge6g8,Bh7&squares=a3,c3)
 
-### `GET /board.png` render a PNG
+### Subset Retrieval
 
-### `GET /piece.svg` render a SVG
+To retrieve a subset of a pieceSet, you can specify the pieces you want using the `subset` parameter. The format is a list of tuples, where each tuple consists of a color (`w` for white, `b` for black) and a piece type (`P` for pawn, `R` for rook, `N` for knight, `B` for bishop, `Q` for queen, `K` for king). An empty list `[]` signifies all pieces.
+
+Example subsets:
+- `[('w', 'P'), ('w', 'Q'), ('w', 'K'), ('b', 'P'), ('b', 'Q')]`
+- `[('w', 'R'), ('w', 'K')]`
+- `[]` (all pieces)
+
+```python
+#./chess/__init__.py
+
+# Adding single letter options to identifier
+ColorName = Union[Literal["white", "black"], Literal["w", "b"]]
+COLOR_NAMES: List[ColorName] = ["black", "white", "b", "w"]
+
+# Add alias
+ColorPieceCombo: TypeAlias = Tuple[ColorName, PieceType]
+
+class PiecesSubset:
+    def __init__(self, piece_set: str, pieces: List[ColorPieceCombo], size: int):
+        self.piece_set = piece_set
+        self.pieces = pieces if pieces else self._all_piece_combinations()
+        self.size = size
+
+    def _all_piece_combinations(self) -> List[ColorPieceCombo]:
+        return [(color, piece_type) for color in COLOR_NAMES for piece_type in PIECE_TYPES]
+```
+
+### `GET /pieces.svg` render a SVG
 
 name | type | default | description
 --- | --- | --- | ---
-**pieceType** | string | required | Piece: `p`, `n`, `b`, `r`, `q`, `k`
-**pieceSet** | string | required | Piece set, e.g., `merida`, `alpha`, `leipzig`
-**color** | string | required | `white` or `black`
+**pieceSet** | string | required | Piece set, e.g., `merida`, `alpha`, `leipzig`, `random` (generate one on the fly)
+**subset** | list | required | List of tuples specifying the pieces to render, e.g., `[('w', 'P'), ('w', 'Q'), ('w', 'K'), ('b', 'P'), ('b', 'Q')]`
 **size** | int | required | The width and height of the bounding-box/image/square
 
-### `GET /piece.png` render a PNG
+### `GET /pieces.png` render a PNG
 
 License
 -------
