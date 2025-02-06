@@ -270,7 +270,7 @@ def load_pieces(piece_set: str) -> Dict[str, str]:
 
     return pieces
 
-def piece(piece: chess.Piece, size: Optional[int] = None, piece_set: str = "alpha") -> str:
+def piece(piece: Union[chess.Piece, chess.PieceId], size: Optional[int] = None, piece_set: str = "alpha") -> str:
     """
     Renders the given :class:`chess.Piece` as an SVG image.
 
@@ -283,7 +283,8 @@ def piece(piece: chess.Piece, size: Optional[int] = None, piece_set: str = "alph
         :alt: R
     """
     svg = _svg(SQUARE_SIZE, size)
-    piece_svg = load_pieces(piece_set)[_piece_code(piece, piece_set=piece_set)]
+
+    piece_svg = load_pieces(piece_set)[str(piece[0]+piece[1])] if isinstance(piece, tuple) else load_pieces(piece_set)[_piece_code(piece, piece_set=piece_set)]
     svg.append(ET.fromstring(piece_svg))
     return SvgWrapper(ET.tostring(svg).decode("utf-8"))
 

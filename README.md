@@ -11,6 +11,13 @@ Requires Python 3.7+.
 ```
 sudo apt-get install python3-dev libffi-dev libxml2-dev libxslt1-dev libcairo2
 pipenv install
+
+`
+[scripts]
+server = "python server.py"
+`
+
+Add to pipfile^
 ```
 
 Usage
@@ -53,26 +60,6 @@ Example subsets:
 - `[('w', 'P'), ('w', 'Q'), ('w', 'K'), ('b', 'P'), ('b', 'Q')]`
 - `[('w', 'R'), ('w', 'K')]`
 - `[]` (all pieces)
-
-```python
-#./chess/__init__.py
-
-# Adding single letter options to identifier
-ColorName = Union[Literal["white", "black"], Literal["w", "b"]]
-COLOR_NAMES: List[ColorName] = ["black", "white", "b", "w"]
-
-# Add alias
-ColorPieceCombo: TypeAlias = Tuple[ColorName, PieceType]
-
-class PiecesSubset:
-    def __init__(self, piece_set: str, pieces: List[ColorPieceCombo], size: int):
-        self.piece_set = piece_set
-        self.pieces = pieces if pieces else self._all_piece_combinations()
-        self.size = size
-
-    def _all_piece_combinations(self) -> List[ColorPieceCombo]:
-        return [(color, piece_type) for color in COLOR_NAMES for piece_type in PIECE_TYPES]
-```
 
 ### `GET /pieces.svg` render a SVG
 

@@ -32,6 +32,9 @@ import random
 import colorsys
 from collections import deque
 import re
+import zipfile
+import io
+
 
 
 def split_not_in_quotes(
@@ -161,9 +164,18 @@ def generate_color_scheme():
     }
 
     return color_scheme
+    # Function to create a ZIP of SVG files
 
+
+AFFIRMATIVE_STRS = [
+        "1",
+        "true",
+        "True",
+        "yes",
+    ]
 
 class Service:
+    
     def make_svg(self, request):
         try:
             board = chess.Board(request.query["fen"])
@@ -191,7 +203,7 @@ class Service:
             check = None
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="check is not a valid square name")
-
+        
         try:
             arrows = [
                 svg.Arrow.from_pgn(s.strip())
@@ -212,13 +224,7 @@ class Service:
 
         flipped = request.query.get("orientation", "white") == "black"
 
-        AFFIRMATIVE_STRS = [
-            "1",
-            "true",
-            "True",
-            "yes",
-        ]
-
+    
         coordinates = request.query.get("coordinates", "0") in AFFIRMATIVE_STRS
 
         try:
@@ -241,7 +247,7 @@ class Service:
                     raise ValueError
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
-
+      
         return deduplicate_svg_attrs(
             svg.board(
                 board,
@@ -256,7 +262,101 @@ class Service:
                 piece_set=piece_set,
             )
         )
+    
+         
+    async def create_zip_of_svgs(self, svg_list):
+        # Create an in-memory ZIP file
+        zip_buffer = io.BytesIO()
 
+        with zipfile.ZipFile(zip_buffer, mode='w', compression=zipfile.ZIP_DEFLATED) as zip_file:
+            for (id, svg_content) in svg_list:
+                svg_filename = f"{''.join(id)}.svg"
+                zip_file.writestr(svg_filename, svg_content)
+
+        # Finalize the ZIP file
+        zip_buffer.seek(0)  # Rewind the buffer to the beginning
+        return zip_buffer
+
+    # Function to create a ZIP of PNG files (converted from SVGs)
+    async def create_zip_of_pngs(self, png_list):
+        # Create an in-memory ZIP file
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, mode='w', compression=zipfile.ZIP_DEFLATED) as zip_file:
+            for (id, png_data) in png_list:
+                png_filename = f"{''.join(id)}.png"
+                zip_file.writestr(png_filename, png_data)
+
+        # Finalize the ZIP file
+        zip_buffer.seek(0)  # Rewind the buffer to the beginning
+        return zip_buffer
+    
+ 
+    def make_pieces_svg(self, request):
+        try:
+            if request.query.get("pieceSet") == "random":
+                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
+                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
+                else:
+                    piece_set = random.choice(PIECE_SETS)
+            else:
+                piece_set = request.query.get("pieceSet", "merida")
+                if piece_set not in PIECE_SETS:
+                    raise ValueError
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+
+        try:
+            size = int(request.query.get("size"))
+            if size is None:
+                raise aiohttp.web.HTTPBadRequest(reason="size query parameter is required")
+            if size < 10 or size > 1000:
+                    raise ValueError
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="size is not a valid number")
+        
+        try:
+            subset_param = request.query.get("subset")
+
+            if subset_param is None:
+                raise aiohttp.web.HTTPBadRequest(reason="subset query parameter is required")
+            subset = [(item[0], item[1]) for item in subset_param.split(',')] if subset_param else []
+          
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="subset is not a valid list")
+        
+
+        svg_list = []
+        for piece in subset:
+            piece_svg = svg.piece(piece=piece, size=size, piece_set=piece_set)
+            svg_list.append((piece, deduplicate_svg_attrs(piece_svg)))
+
+        return svg_list
+            
+        
+    async def render_pieces_svg_zip(self, request):
+        svg_data = self.make_pieces_svg(request)
+        zip_buffer = await self.create_zip_of_svgs(svg_data)
+
+        with open("pieces.zip", "wb") as f:
+            f.write(zip_buffer.getvalue())
+
+        zip_buffer.seek(0)
+        return  aiohttp.web.Response(body=zip_buffer.read(), content_type="application/zip", headers={
+            'Content-Disposition': 'attachment; filename="pieces.zip"'
+        })
+    
+    async def render_pieces_png_zip(self, request):
+        svg_data = self.make_pieces_svg(request)
+        png_data = []
+        for (id, _svg) in svg_data:
+            png_data.append((id, cairosvg.svg2png(bytestring=_svg)))
+        zip_buffer = await self.create_zip_of_pngs(png_data)
+        return  aiohttp.web.Response(body=zip_buffer.read(), content_type="application/zip", headers={
+            'Content-Disposition': 'attachment; filename="pieces.zip"'
+        })
+
+    
     async def render_svg(self, request):
         return aiohttp.web.Response(
             text=self.make_svg(request), content_type="image/svg+xml"
@@ -277,8 +377,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     app = aiohttp.web.Application()
+
     service = Service()
+
     app.router.add_get("/board.png", service.render_png)
     app.router.add_get("/board.svg", service.render_svg)
+    
+    app.router.add_get("/pieces_png.zip", service.render_pieces_png_zip)
+    app.router.add_get("/pieces_svg.zip", service.render_pieces_svg_zip)
+
 
     aiohttp.web.run_app(app, port=args.port, host=args.bind, access_log=None)
