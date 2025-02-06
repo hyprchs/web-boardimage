@@ -290,7 +290,43 @@ class Service:
         # Finalize the ZIP file
         zip_buffer.seek(0)  # Rewind the buffer to the beginning
         return zip_buffer
+
+
+    def make_piece_svg(self, request):
+        try:
+            if request.query.get("pieceSet") == "random":
+                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
+                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
+                else:
+                    piece_set = random.choice(PIECE_SETS)
+            else:
+                piece_set = request.query.get("pieceSet", "merida")
+                if piece_set not in PIECE_SETS:
+                    raise ValueError
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+
+        try:
+            size = int(request.query.get("size"))
+            if size is None:
+                raise aiohttp.web.HTTPBadRequest(reason="size query parameter is required")
+            if size < 10 or size > 1000:
+                    raise ValueError
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="size is not a valid number")
+        
+        try:
+            piece = request.query.get("piece")
+            
+            if piece is None or piece not in chess.PIECE_CODES:   
+                raise aiohttp.web.HTTPBadRequest(reason="piece query parameter is required")
+          
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="piece is not a valid piece")
+       
+        piece_svg = svg.piece(piece=piece, size=size, piece_set=piece_set)
     
+        return deduplicate_svg_attrs(piece_svg)
  
     def make_pieces_svg(self, request):
         try:
@@ -320,12 +356,14 @@ class Service:
 
             if subset_param is None:
                 raise aiohttp.web.HTTPBadRequest(reason="subset query parameter is required")
-            subset = [(item[0], item[1]) for item in subset_param.split(',')] if subset_param else []
+            subset = subset_param.split(',') if subset_param else []
+            for piece in subset:
+                if piece not in chess.PIECE_CODES:
+                    raise aiohttp.web.HTTPBadRequest(reason="subset contains invalid piece")
           
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="subset is not a valid list")
         
-
         svg_list = []
         for piece in subset:
             piece_svg = svg.piece(piece=piece, size=size, piece_set=piece_set)
@@ -337,11 +375,6 @@ class Service:
     async def render_pieces_svg_zip(self, request):
         svg_data = self.make_pieces_svg(request)
         zip_buffer = await self.create_zip_of_svgs(svg_data)
-
-        with open("pieces.zip", "wb") as f:
-            f.write(zip_buffer.getvalue())
-
-        zip_buffer.seek(0)
         return  aiohttp.web.Response(body=zip_buffer.read(), content_type="application/zip", headers={
             'Content-Disposition': 'attachment; filename="pieces.zip"'
         })
@@ -355,7 +388,21 @@ class Service:
         return  aiohttp.web.Response(body=zip_buffer.read(), content_type="application/zip", headers={
             'Content-Disposition': 'attachment; filename="pieces.zip"'
         })
-
+    
+    async def render_piece_png(self, request):
+        svg_data = self.make_piece_svg(request)
+        png_data = cairosvg.svg2png(bytestring=svg_data)
+        filename = request.query.get("piece", "ERROR")
+        return aiohttp.web.Response(
+            body=png_data,
+            content_type="image/png",
+            headers={"Content-Disposition": f'attachment; filename={filename}.png'}
+        )
+    
+    async def render_piece_svg(self, request):
+        return aiohttp.web.Response(
+            text=self.make_piece_svg(request), content_type="image/svg+xml"
+        )
     
     async def render_svg(self, request):
         return aiohttp.web.Response(
@@ -383,8 +430,11 @@ if __name__ == "__main__":
     app.router.add_get("/board.png", service.render_png)
     app.router.add_get("/board.svg", service.render_svg)
     
-    app.router.add_get("/pieces_png.zip", service.render_pieces_png_zip)
-    app.router.add_get("/pieces_svg.zip", service.render_pieces_svg_zip)
+    # app.router.add_get("/pieces_png.zip", service.render_pieces_png_zip)
+    # app.router.add_get("/pieces_svg.zip", service.render_pieces_svg_zip)
+
+    app.router.add_get("/piece.png", service.render_piece_png)
+    app.router.add_get("/piece.svg", service.render_piece_svg)
 
 
     aiohttp.web.run_app(app, port=args.port, host=args.bind, access_log=None)

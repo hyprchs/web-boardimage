@@ -48,6 +48,7 @@ KING: PieceType = 6
 PIECE_TYPES: List[PieceType] = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING]
 PIECE_SYMBOLS = [None, "p", "n", "b", "r", "q", "k"]
 PIECE_NAMES = [None, "pawn", "knight", "bishop", "rook", "queen", "king"]
+PIECE_CODES = ['bP','bK', 'bB', 'bR', 'bK', 'bQ', 'bK', 'wP', 'wK', 'wB', 'wR', 'wK', 'wQ']    
 
 def piece_symbol(piece_type: PieceType) -> str:
     return typing.cast(str, PIECE_SYMBOLS[piece_type])
