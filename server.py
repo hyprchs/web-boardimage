@@ -316,9 +316,11 @@ class Service:
             raise aiohttp.web.HTTPBadRequest(reason="size is not a valid number")
         
         try:
-            piece = request.query.get("piece")
-            
-            if piece is None or piece not in chess.PIECE_CODES:   
+            piece = request.query.get('piece')
+    
+            if piece is None or piece not in chess.PIECE_CODES: 
+                print(chess.PIECE_CODES)
+                print(piece)  
                 raise aiohttp.web.HTTPBadRequest(reason="piece query parameter is required")
           
         except ValueError:
@@ -371,7 +373,6 @@ class Service:
 
         return svg_list
             
-        
     async def render_pieces_svg_zip(self, request):
         svg_data = self.make_pieces_svg(request)
         zip_buffer = await self.create_zip_of_svgs(svg_data)

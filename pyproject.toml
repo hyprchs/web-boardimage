@@ -8,3 +8,6 @@ dependencies = [
     "aiohttp>=3.11.11",
     "cairosvg~=2.7.1",
 ]
+
+[tool.setuptools]
+packages = ["chess", "piece_png", "pieces_png"]  # List of top-level packages
