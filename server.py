@@ -22,8 +22,8 @@
 import argparse
 import aiohttp.web
 
-import chess
-import chess.svg as svg
+import src.web_boardimage.chess as chess
+import src.web_boardimage.chess.svg as svg
 
 import cairosvg
 import json
