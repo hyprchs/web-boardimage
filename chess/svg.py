@@ -283,6 +283,7 @@ def piece(piece: chess.Piece, size: Optional[int] = None, piece_set: str = "alph
         :alt: R
     """
     svg = _svg(SQUARE_SIZE, size)
+
     piece_svg = load_pieces(piece_set)[_piece_code(piece, piece_set=piece_set)]
     svg.append(ET.fromstring(piece_svg))
     return SvgWrapper(ET.tostring(svg).decode("utf-8"))
@@ -353,6 +354,8 @@ def board(
     .. deprecated:: 1.1
         Use *orientation* with a color instead of the *flipped* toggle.
     """
+
+    
     orientation ^= flipped
     inner_border = 1 if borders and coordinates else 0
     outer_border = 1 if borders else 0

@@ -27,9 +27,7 @@ from typing import ClassVar, Callable, Counter, Dict, Generic, Hashable, Iterabl
 if typing.TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-
 EnPassantSpec = Literal["legal", "fen", "xfen"]
-
 
 Color: TypeAlias = bool
 WHITE: Color = True

@@ -22,8 +22,8 @@
 import argparse
 import aiohttp.web
 
-import chess
-import chess.svg as svg
+import src.web_boardimage.chess as chess
+import src.web_boardimage.chess.svg as svg
 
 import cairosvg
 import json
@@ -32,6 +32,7 @@ import random
 import colorsys
 from collections import deque
 import re
+
 
 
 def split_not_in_quotes(
@@ -161,9 +162,18 @@ def generate_color_scheme():
     }
 
     return color_scheme
+    # Function to create a ZIP of SVG files
 
+
+AFFIRMATIVE_STRS = [
+        "1",
+        "true",
+        "True",
+        "yes",
+    ]
 
 class Service:
+    
     def make_svg(self, request):
         try:
             board = chess.Board(request.query["fen"])
@@ -191,7 +201,7 @@ class Service:
             check = None
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="check is not a valid square name")
-
+        
         try:
             arrows = [
                 svg.Arrow.from_pgn(s.strip())
@@ -212,13 +222,7 @@ class Service:
 
         flipped = request.query.get("orientation", "white") == "black"
 
-        AFFIRMATIVE_STRS = [
-            "1",
-            "true",
-            "True",
-            "yes",
-        ]
-
+    
         coordinates = request.query.get("coordinates", "0") in AFFIRMATIVE_STRS
 
         try:
@@ -241,7 +245,7 @@ class Service:
                     raise ValueError
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
-
+      
         return deduplicate_svg_attrs(
             svg.board(
                 board,
@@ -257,6 +261,64 @@ class Service:
             )
         )
 
+
+    def make_piece_svg(self, request):
+        try:
+            if request.query.get("pieceSet") == "random":
+                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
+                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
+                else:
+                    piece_set = random.choice(PIECE_SETS)
+            else:
+                piece_set = request.query.get("pieceSet", "merida")
+                if piece_set not in PIECE_SETS:
+                    raise ValueError
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+
+        try:
+            size = int(request.query.get("size"))
+            if size is None:
+                raise aiohttp.web.HTTPBadRequest(reason="size query parameter is required")
+            if size < 10 or size > 1000:
+                    raise ValueError
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="size is not a valid number")
+        
+        try:
+            piece_symbol = request.query.get('piece')
+        
+            if piece_symbol is None:
+                raise aiohttp.web.HTTPBadRequest(reason="piece query parameter is required")
+            try:
+                piece = chess.Piece.from_symbol(piece_symbol)
+            except ValueError:
+                raise aiohttp.web.HTTPBadRequest(reason="piece is not a valid piece")
+            
+
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="piece is not a valid piece")
+       
+        piece_svg = svg.piece(piece=piece, size=size, piece_set=piece_set)
+    
+        return deduplicate_svg_attrs(piece_svg)
+
+
+    async def render_piece_png(self, request):
+        svg_data = self.make_piece_svg(request)
+        png_data = cairosvg.svg2png(bytestring=svg_data)
+        filename = request.query.get("piece", "ERROR")
+        return aiohttp.web.Response(
+            body=png_data,
+            content_type="image/png",
+            headers={"Content-Disposition": f'attachment; filename={filename}.png'}
+        )
+    
+    async def render_piece_svg(self, request):
+        return aiohttp.web.Response(
+            text=self.make_piece_svg(request), content_type="image/svg+xml"
+        )
+    
     async def render_svg(self, request):
         return aiohttp.web.Response(
             text=self.make_svg(request), content_type="image/svg+xml"
@@ -277,8 +339,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     app = aiohttp.web.Application()
+
     service = Service()
+
     app.router.add_get("/board.png", service.render_png)
     app.router.add_get("/board.svg", service.render_svg)
+
+    app.router.add_get("/piece.png", service.render_piece_png)
+    app.router.add_get("/piece.svg", service.render_piece_svg)
+
 
     aiohttp.web.run_app(app, port=args.port, host=args.bind, access_log=None)
