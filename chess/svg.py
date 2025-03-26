@@ -69,6 +69,7 @@ DEFAULT_COLORS = {
 
 
 class Arrow:
+
     """Details of an arrow to be drawn."""
 
     tail: chess.Square
@@ -79,6 +80,11 @@ class Arrow:
 
     color: str
     """Arrow color."""
+    
+    # Added this field
+    plateform: str
+    """ chesscom or lichess """
+    # beckett ^
 
     def __init__(self, tail: chess.Square, head: chess.Square, *, color: str = "green") -> None:
         self.tail = tail
@@ -282,6 +288,7 @@ def piece(piece: chess.Piece, size: Optional[int] = None, piece_set: str = "alph
     .. image:: ../docs/wR.svg
         :alt: R
     """
+
     svg = _svg(SQUARE_SIZE, size)
     piece_svg = load_pieces(piece_set)[_piece_code(piece, piece_set=piece_set)]
     svg.append(ET.fromstring(piece_svg))
@@ -558,8 +565,17 @@ def board(
         ytail = outer_border + margin + inner_border + (7.5 - tail_rank if orientation else tail_rank + 0.5) * SQUARE_SIZE
         xhead = outer_border + margin + inner_border + (head_file + 0.5 if orientation else 7.5 - head_file) * SQUARE_SIZE
         yhead = outer_border + margin + inner_border + (7.5 - head_rank if orientation else head_rank + 0.5) * SQUARE_SIZE
-
+        
+        # beckett comments ->
+        # If the to and from square are the same it makes a circle instead of an arrow like in README example
+        # ET.SubElement is what adds the arrow svg element to the board svg
         if (head_file, head_rank) == (tail_file, tail_rank):
+            # beckett comments ->
+            # ET.SubElement(SVG, TAG, ATTRIB)
+            # TAG specifies the general shape without specificity
+            # ATTRIB Goes more in detail about style 
+            # _attrs() just reformats the dict so the values are all strings as required
+            # ATTRIB options --> https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute
             ET.SubElement(svg, "circle", _attrs({
                 "cx": xhead,
                 "cy": yhead,
@@ -570,7 +586,14 @@ def board(
                 "fill": "none",
                 "class": "circle",
             }))
+
+        # beckett ->
+        elif arrow.plateform == "chesscom":
+            #TODO: Add chess.com arrow style logic
+            pass
+
         else:
+
             marker_size = 0.75 * SQUARE_SIZE
             marker_margin = 0.1 * SQUARE_SIZE
 
@@ -583,6 +606,7 @@ def board(
             xtip = xhead - dx * marker_margin / hypot
             ytip = yhead - dy * marker_margin / hypot
 
+         
             ET.SubElement(svg, "line", _attrs({
                 "x1": xtail,
                 "y1": ytail,
