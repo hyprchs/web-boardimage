@@ -21,13 +21,19 @@
 
 import argparse
 import aiohttp.web
+import os
+import sys
+
+# Prefer the vendored python-chess submodule at ./chess/ (repo root),
+# which contains the actual `chess` package at ./chess/chess/.
+THIS_DIR = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(THIS_DIR, "chess"))
 
 import chess
 import chess.svg as svg
 
 import cairosvg
 import json
-import os
 import random
 import colorsys
 from collections import deque
@@ -96,7 +102,6 @@ def deduplicate_svg_attrs(svg_string: str) -> str:
     new_attrs = " ".join([f"{key}={value}" for key, value in attrs.items()])
     return re.sub(PAT, f"<svg {new_attrs}>", svg_string, count=1)
 
-THIS_DIR = os.path.dirname(__file__)
 PIECE_SETS = os.listdir(os.path.join(THIS_DIR, "piece_png"))
 
 
