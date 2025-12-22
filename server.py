@@ -22,12 +22,6 @@
 import argparse
 import aiohttp.web
 import os
-import sys
-
-# Prefer the vendored python-chess submodule at ./chess/ (repo root),
-# which contains the actual `chess` package at ./chess/chess/.
-THIS_DIR = os.path.dirname(__file__)
-sys.path.insert(0, os.path.join(THIS_DIR, "chess"))
 
 import chess
 import chess.svg as svg
