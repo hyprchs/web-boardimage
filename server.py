@@ -33,6 +33,8 @@ import colorsys
 from collections import deque
 import re
 
+THIS_DIR = os.path.dirname(__file__)
+
 
 def split_not_in_quotes(
     s: str, delim: str = " ", quotes: list[tuple[str, str]] | None = None
