@@ -98,7 +98,19 @@ def deduplicate_svg_attrs(svg_string: str) -> str:
     new_attrs = " ".join([f"{key}={value}" for key, value in attrs.items()])
     return re.sub(PAT, f"<svg {new_attrs}>", svg_string, count=1)
 
-PIECE_SETS = os.listdir(os.path.join(THIS_DIR, "piece_png"))
+def available_piece_sets() -> list[str]:
+    """
+    Get available piece sets from the vendored python-chess submodule.
+    """
+    piece_root = os.path.join(THIS_DIR, "python-chess", "chess", "piece")
+    return sorted(
+        d
+        for d in os.listdir(piece_root)
+        if os.path.isdir(os.path.join(piece_root, d))
+    )
+
+
+PIECE_SETS = available_piece_sets()
 
 
 def load_theme(name):
