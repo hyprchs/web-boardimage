@@ -98,7 +98,7 @@ def deduplicate_svg_attrs(svg_string: str) -> str:
     new_attrs = " ".join([f"{key}={value}" for key, value in attrs.items()])
     return re.sub(PAT, f"<svg {new_attrs}>", svg_string, count=1)
 
-PIECE_SETS = os.listdir(os.path.join(THIS_DIR, "piece_png"))
+PIECE_SETS = svg.available_piece_sets()
 
 
 def load_theme(name):
