@@ -10,6 +10,7 @@ Requires Python and poetry:
 
 ```
 sudo apt-get install python3-dev libffi-dev libxml2-dev libxslt1-dev libcairo2
+git submodule update --init --recursive
 poetry install
 ```
 
@@ -18,6 +19,24 @@ Usage
 
 ```
 poetry run python server.py [--port 8080] [--bind 127.0.0.1]
+```
+
+Docker
+------
+
+Build and run:
+
+```
+git submodule update --init --recursive
+docker build -t web-boardimage .
+docker run --rm -p 8080:8080 web-boardimage
+```
+
+Or with compose:
+
+```
+git submodule update --init --recursive
+docker compose up --build
 ```
 
 HTTP API
