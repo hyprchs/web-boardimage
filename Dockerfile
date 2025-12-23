@@ -28,10 +28,8 @@ RUN poetry install --no-interaction --no-ansi
 # Copy app code + assets.
 COPY server.py ./
 COPY *.json ./
-COPY piece_png ./piece_png
 COPY LICENSE.txt README.md ./
 
 EXPOSE 8080
 
 CMD ["python", "server.py", "--bind", "0.0.0.0", "--port", "8080"]
-
