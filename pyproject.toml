@@ -10,6 +10,11 @@ include = "server.py"
 
 [tool.poetry.dependencies]
 aiohttp = "^3.11.11"
-chess = "^1.11.1"
+# Use the vendored python-chess submodule.
+#
+# Note: The submodule directory must not be named `chess/`, otherwise Python
+# will treat it as a namespace package from the repo root and shadow the real
+# `chess` package (which lives at `<submodule>/chess/`).
+chess = { path = "python-chess", develop = true }
 CairoSVG = "^2.7.1"
 python = "^3.9"

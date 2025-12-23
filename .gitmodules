@@ -1,0 +1,3 @@
+[submodule "chess"]
+	path = python-chess
+	url = https://github.com/hyprchs/python-chess.git
