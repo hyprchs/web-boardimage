@@ -211,7 +211,7 @@ class Service:
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid squares")
 
-        flipped = request.query.get("orientation", "white") == "black"
+        orientation = chess.BLACK if request.query.get("orientation", "white") == "black" else chess.WHITE
 
         AFFIRMATIVE_STRS = [
             "1",
@@ -247,7 +247,7 @@ class Service:
             svg.board(
                 board,
                 coordinates=coordinates,
-                flipped=flipped,
+                orientation=orientation,
                 lastmove=lastmove,
                 check=check,
                 arrows=arrows,
