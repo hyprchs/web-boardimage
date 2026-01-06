@@ -20,14 +20,12 @@
 """An HTTP service that renders chess board images"""
 
 import argparse
-import asyncio
 import aiohttp.web
 import chess
 import chess.svg
 import cairosvg
 import json
 import os
-import re
 
 
 def load_theme(name):
