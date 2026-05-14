@@ -237,8 +237,8 @@ class Service:
                 else:
                     piece_set = random.choice(PIECE_SETS)
             else:
-                piece_set = request.query.get("pieceSet", "merida")
-                if piece_set not in PIECE_SETS:
+                piece_set = request.query.get("pieceSet")
+                if piece_set is not None and piece_set not in PIECE_SETS:
                     raise ValueError
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
@@ -273,8 +273,8 @@ class Service:
                 else:
                     piece_set = random.choice(PIECE_SETS)
             else:
-                piece_set = request.query.get("pieceSet", "merida")
-                if piece_set not in PIECE_SETS:
+                piece_set = request.query.get("pieceSet")
+                if piece_set is not None and piece_set not in PIECE_SETS:
                     raise ValueError
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
