@@ -73,6 +73,13 @@ name | type | default | description
 **piece** | char | required | `r` (black-rook), `b` (black-bishop), `n` (black-knight), `q` (black-queen), `k` (black-king), `p` (black-pawn), `R` (white-rook), `B` (white-bishop), `N` (white-knight), `Q` (white-queen), `K` (white-king), `P` (white-pawn)
 **size** | int | required | The width and height of the bounding-box/image/square
 
+<details>
+<summary>Supported piece sets</summary>
+
+`alpha`, `anarcandy`, `caliente`, `california`, `cardinal`, `cburnett`, `celtic`, `chess7`, `chessnut`, `companion`, `cooke`, `dubrovny`, `fantasy`, `fresca`, `gioco`, `governor`, `horsey`, `icpieces`, `kiwen-suwi`, `kosal`, `leipzig`, `letter`, `libra`, `maestro`, `merida`, `monarchy`, `mono`, `mpchess`, `pirouetti`, `pixel`, `reillycraig`, `riohacha`, `shapes`, `spatial`, `staunty`, `tatiana`, `random`
+
+</details>
+
 ### `GET /piece.png` render a PNG
 
 License
