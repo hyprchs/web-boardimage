@@ -35,6 +35,7 @@ import re
 
 THIS_DIR = os.path.dirname(__file__)
 
+
 def split_not_in_quotes(
     s: str, delim: str = " ", quotes: list[tuple[str, str]] | None = None
 ) -> list[str]:
@@ -163,14 +164,6 @@ def generate_color_scheme():
     return color_scheme
 
 
-AFFIRMATIVE_STRS = [
-    "1",
-    "true",
-    "True",
-    "yes",
-]
-
-
 class Service:
     def make_svg(self, request):
         try:
@@ -218,11 +211,14 @@ class Service:
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid squares")
 
-        orientation = (
-            chess.BLACK
-            if request.query.get("orientation", "white") == "black"
-            else chess.WHITE
-        )
+        orientation = chess.BLACK if request.query.get("orientation", "white") == "black" else chess.WHITE
+
+        AFFIRMATIVE_STRS = [
+            "1",
+            "true",
+            "True",
+            "yes",
+        ]
 
         coordinates = request.query.get("coordinates", "0") in AFFIRMATIVE_STRS
 
@@ -236,8 +232,8 @@ class Service:
 
         try:
             if request.query.get("pieceSet") == "random":
-                if request.query.get("avoidMono", "false") in AFFIRMATIVE_STRS:
-                    piece_set = random.choice([set for set in PIECE_SETS if set != "mono"])
+                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
+                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
                 else:
                     piece_set = random.choice(PIECE_SETS)
             else:
@@ -263,10 +259,17 @@ class Service:
         )
 
     def make_piece_svg(self, request):
+        AFFIRMATIVE_STRS = [
+            "1",
+            "true",
+            "True",
+            "yes",
+        ]
+
         try:
             if request.query.get("pieceSet") == "random":
-                if request.query.get("avoidMono", "false") in AFFIRMATIVE_STRS:
-                    piece_set = random.choice([set for set in PIECE_SETS if set != "mono"])
+                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
+                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
                 else:
                     piece_set = random.choice(PIECE_SETS)
             else:
@@ -338,10 +341,8 @@ if __name__ == "__main__":
 
     app = aiohttp.web.Application()
     service = Service()
-
     app.router.add_get("/board.png", service.render_png)
     app.router.add_get("/board.svg", service.render_svg)
-
     app.router.add_get("/piece.png", service.render_piece_png)
     app.router.add_get("/piece.svg", service.render_piece_svg)
 
