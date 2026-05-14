@@ -6,18 +6,37 @@ An HTTP service that renders chess board images.
 Installation
 ------------
 
-Requires Python 3.7+.
+Requires Python and poetry:
 
 ```sh
 sudo apt-get install python3-dev libffi-dev libxml2-dev libxslt1-dev libcairo2
-pipenv install
+git submodule update --init --recursive
+poetry install
 ```
 
 Usage
 -----
 
 ```sh
-pipenv run server [--port 8080] [--bind 127.0.0.1]
+poetry run python server.py [--port 8080] [--bind 127.0.0.1]
+```
+
+Docker
+------
+
+Build and run:
+
+```
+git submodule update --init --recursive
+docker build -t web-boardimage .
+docker run --rm -p 8080:8080 web-boardimage
+```
+
+Or with compose:
+
+```
+git submodule update --init --recursive
+docker compose up --build
 ```
 
 HTTP API

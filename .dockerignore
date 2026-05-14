@@ -1,0 +1,12 @@
+.git
+.gitmodules
+.github
+__pycache__
+*.pyc
+.venv
+.tox
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.DS_Store
+uv.lock
