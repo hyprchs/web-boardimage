@@ -102,7 +102,7 @@ PIECE_SETS = svg.available_piece_sets()
 
 
 def load_theme(name):
-    with open(os.path.join(THIS_DIR, f"{name}.json")) as f:
+    with open(os.path.join(THIS_DIR, "themes", f"{name}.json")) as f:
         return json.load(f)
 
 
