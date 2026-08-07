@@ -1,20 +1,17 @@
-[tool.poetry]
+[project]
 name = "web-boardimage"
-package-mode = false
+version = "0.1.0"
 description = "An HTTP service that renders chess board images"
-authors = ["Niklas Fiekas <niklas.fiekas@backscattering.de>"]
 readme = "README.md"
+authors = [
+    { name = "Niklas Fiekas", email = "niklas.fiekas@backscattering.de" },
+]
+requires-python = ">=3.10"
+dependencies = [
+    "aiohttp~=3.14.3",
+    "chess~=1.11.2",
+    "CairoSVG~=2.9.0",
+]
 
-[[tool.poetry.packages]]
-include = "server.py"
-
-[tool.poetry.dependencies]
-aiohttp = "^3.11.11"
-# Use the vendored python-chess submodule.
-#
-# Note: The submodule directory must not be named `chess/`, otherwise Python
-# will treat it as a namespace package from the repo root and shadow the real
-# `chess` package (which lives at `<submodule>/chess/`).
-chess = { path = "python-chess", develop = true }
-CairoSVG = "^2.7.1"
-python = "^3.9"
+[tool.uv.sources]
+chess = { path = "python-chess", editable = true }
