@@ -20,6 +20,7 @@
 """An HTTP service that renders chess board images"""
 
 import argparse
+import configparser
 import aiohttp.web
 import os
 
@@ -99,6 +100,16 @@ def deduplicate_svg_attrs(svg_string: str) -> str:
     return re.sub(PAT, f"<svg {new_attrs}>", svg_string, count=1)
 
 PIECE_SETS = svg.available_piece_sets()
+
+
+def query_bool(request, name, default=False):
+    value = request.query.get(name)
+    if value is None:
+        return default
+    try:
+        return configparser.ConfigParser.BOOLEAN_STATES[value.lower()]
+    except KeyError:
+        raise aiohttp.web.HTTPBadRequest(reason=f"{name} must be a boolean")
 
 
 def load_theme(name):
@@ -213,14 +224,7 @@ class Service:
 
         orientation = chess.BLACK if request.query.get("orientation", "white") == "black" else chess.WHITE
 
-        AFFIRMATIVE_STRS = [
-            "1",
-            "true",
-            "True",
-            "yes",
-        ]
-
-        coordinates = request.query.get("coordinates", "0") in AFFIRMATIVE_STRS
+        coordinates = query_bool(request, "coordinates")
 
         try:
             if request.query.get("colors") == "random":
@@ -232,8 +236,11 @@ class Service:
 
         try:
             if request.query.get("pieceSet") == "random":
-                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
-                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
+                if query_bool(request, "avoidMono"):
+                    piece_set = random.choice([
+                        piece_set_name for piece_set_name in PIECE_SETS
+                        if piece_set_name != 'mono'
+                    ])
                 else:
                     piece_set = random.choice(PIECE_SETS)
             else:
@@ -259,17 +266,13 @@ class Service:
         )
 
     def make_piece_svg(self, request):
-        AFFIRMATIVE_STRS = [
-            "1",
-            "true",
-            "True",
-            "yes",
-        ]
-
         try:
             if request.query.get("pieceSet") == "random":
-                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
-                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
+                if query_bool(request, "avoidMono"):
+                    piece_set = random.choice([
+                        piece_set_name for piece_set_name in PIECE_SETS
+                        if piece_set_name != 'mono'
+                    ])
                 else:
                     piece_set = random.choice(PIECE_SETS)
             else:
