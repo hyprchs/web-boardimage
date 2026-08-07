@@ -54,7 +54,7 @@ name | type | default | description
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `random` (generate one on the fly)
-**pieceSet** | string | *(built-in Burnett)* | Optional. Omit for python-chess's built-in Burnett pieces, or see [supported piece sets](#supported-piece-sets), e.g., `merida`, `alpha`, `leipzig`, `random` (generate one on the fly)
+**pieceSet** | string | *(built-in Burnett)* | Optional piece set; see [supported piece sets](#supported-piece-sets)
 
 ```
 https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/PpP5/6PK/8/8&lastMove=f4g6&check=h8&arrows=Ge6g8,Bh7&squares=a3,c3
@@ -64,12 +64,12 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 
 ### `GET /board.png` render a PNG
 
-### `GET /piece.svg` render an SVG
+### `GET /piece.svg` and `/piece.png` render a piece
 
 name | type | default | description
 --- | --- | --- | ---
-**pieceSet** | string | *(built-in Burnett)* | Optional. Omit for python-chess's built-in Burnett pieces, or see [supported piece sets](#supported-piece-sets), e.g., `merida`, `alpha`, `leipzig`, `random` (generate one on the fly)
-**piece** | char | required | `r` (black-rook), `b` (black-bishop), `n` (black-knight), `q` (black-queen), `k` (black-king), `p` (black-pawn), `R` (white-rook), `B` (white-bishop), `N` (white-knight), `Q` (white-queen), `K` (white-king), `P` (white-pawn)
+**pieceSet** | string | *(built-in Burnett)* | Optional piece set; see [supported piece sets](#supported-piece-sets)
+**piece** | char | required | Piece letter: `p`, `n`, `b`, `r`, `q`, `k` for pawn, knight, bishop, rook, queen, king; uppercase is white, lowercase is black
 **size** | int | required | The width and height of the bounding-box/image/square
 
 #### Supported Piece Sets
@@ -77,13 +77,11 @@ name | type | default | description
 <details>
 <summary>Show all supported piece sets</summary>
 
-When `pieceSet` is omitted, SVGs use python-chess's built-in Burnett pieces. Passing `cburnett` selects the external `cburnett` piece-set files.
+Omit `pieceSet` for python-chess's built-in Burnett pieces. Use `random` to choose a piece set at render time.
 
 `alpha`, `anarcandy`, `caliente`, `california`, `cardinal`, `cburnett`, `celtic`, `chess7`, `chessnut`, `companion`, `cooke`, `dubrovny`, `fantasy`, `fresca`, `gioco`, `governor`, `horsey`, `icpieces`, `kiwen-suwi`, `kosal`, `leipzig`, `letter`, `libra`, `maestro`, `merida`, `monarchy`, `mono`, `mpchess`, `pirouetti`, `pixel`, `reillycraig`, `riohacha`, `shapes`, `spatial`, `staunty`, `tatiana`, `random`
 
 </details>
-
-### `GET /piece.png` render a PNG
 
 License
 -------

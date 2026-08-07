@@ -284,10 +284,10 @@ class Service:
             if raw_size is None:
                 raise aiohttp.web.HTTPBadRequest(reason="size query parameter is required")
             size = int(raw_size)
-            if size < 10 or size > 1000:
-                raise ValueError
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="size is not a valid number")
+        if size < 10 or size > 1000:
+            raise aiohttp.web.HTTPBadRequest(reason="size must be between 10 and 1000")
 
         try:
             piece_symbol = request.query.get("piece")
