@@ -100,6 +100,7 @@ def deduplicate_svg_attrs(svg_string: str) -> str:
     return re.sub(PAT, f"<svg {new_attrs}>", svg_string, count=1)
 
 PIECE_SETS = svg.available_piece_sets()
+DEFAULT_PIECE_SET = "cburnett"
 
 
 def query_bool(request, name, default=False):
@@ -110,6 +111,20 @@ def query_bool(request, name, default=False):
         return configparser.ConfigParser.BOOLEAN_STATES[value.lower()]
     except KeyError:
         raise aiohttp.web.HTTPBadRequest(reason=f"{name} must be a boolean")
+
+
+def select_piece_set(request):
+    piece_set = request.query.get("pieceSet", DEFAULT_PIECE_SET)
+    if piece_set == "random":
+        if query_bool(request, "avoidMono"):
+            return random.choice([
+                piece_set_name for piece_set_name in PIECE_SETS
+                if piece_set_name != 'mono'
+            ])
+        return random.choice(PIECE_SETS)
+    if piece_set not in PIECE_SETS:
+        raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+    return piece_set
 
 
 def load_theme(name):
@@ -234,21 +249,7 @@ class Service:
         except KeyError:
             raise aiohttp.web.HTTPBadRequest(reason="theme colors not found")
 
-        try:
-            if request.query.get("pieceSet") == "random":
-                if query_bool(request, "avoidMono"):
-                    piece_set = random.choice([
-                        piece_set_name for piece_set_name in PIECE_SETS
-                        if piece_set_name != 'mono'
-                    ])
-                else:
-                    piece_set = random.choice(PIECE_SETS)
-            else:
-                piece_set = request.query.get("pieceSet")
-                if piece_set is not None and piece_set not in PIECE_SETS:
-                    raise ValueError
-        except ValueError:
-            raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+        piece_set = select_piece_set(request)
 
         return deduplicate_svg_attrs(
             svg.board(
@@ -266,21 +267,7 @@ class Service:
         )
 
     def make_piece_svg(self, request):
-        try:
-            if request.query.get("pieceSet") == "random":
-                if query_bool(request, "avoidMono"):
-                    piece_set = random.choice([
-                        piece_set_name for piece_set_name in PIECE_SETS
-                        if piece_set_name != 'mono'
-                    ])
-                else:
-                    piece_set = random.choice(PIECE_SETS)
-            else:
-                piece_set = request.query.get("pieceSet")
-                if piece_set is not None and piece_set not in PIECE_SETS:
-                    raise ValueError
-        except ValueError:
-            raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+        piece_set = select_piece_set(request)
 
         try:
             raw_size = request.query.get("size")

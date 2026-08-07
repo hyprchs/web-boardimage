@@ -54,7 +54,7 @@ name | type | default | description
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `random` (generate one on the fly)
-**pieceSet** | string | *(built-in Burnett)* | Optional piece set; see [supported piece sets](#supported-piece-sets)
+**pieceSet** | string | `cburnett` | Optional piece set; see [supported piece sets](#supported-piece-sets)
 
 ```
 https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/PpP5/6PK/8/8&lastMove=f4g6&check=h8&arrows=Ge6g8,Bh7&squares=a3,c3
@@ -68,7 +68,7 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 
 name | type | default | description
 --- | --- | --- | ---
-**pieceSet** | string | *(built-in Burnett)* | Optional piece set; see [supported piece sets](#supported-piece-sets)
+**pieceSet** | string | `cburnett` | Optional piece set; see [supported piece sets](#supported-piece-sets)
 **piece** | char | required | Piece letter: `p`, `n`, `b`, `r`, `q`, `k` for pawn, knight, bishop, rook, queen, king; uppercase is white, lowercase is black
 **size** | int | required | The width and height of the bounding-box/image/square
 
@@ -77,7 +77,7 @@ name | type | default | description
 <details>
 <summary>Show all supported piece sets</summary>
 
-Omit `pieceSet` for python-chess's built-in Burnett pieces. Use `random` to choose a piece set at render time.
+Omit `pieceSet` to use `cburnett`. Use `random` to choose a piece set at render time.
 
 `alpha`, `anarcandy`, `caliente`, `california`, `cardinal`, `cburnett`, `celtic`, `chess7`, `chessnut`, `companion`, `cooke`, `dubrovny`, `fantasy`, `fresca`, `gioco`, `governor`, `horsey`, `icpieces`, `kiwen-suwi`, `kosal`, `leipzig`, `letter`, `libra`, `maestro`, `merida`, `monarchy`, `mono`, `mpchess`, `pirouetti`, `pixel`, `reillycraig`, `riohacha`, `shapes`, `spatial`, `staunty`, `tatiana`, `random`
 
