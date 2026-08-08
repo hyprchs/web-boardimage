@@ -276,21 +276,17 @@ class Service:
                 raise aiohttp.web.HTTPBadRequest(reason="size query parameter is required")
             size = int(raw_size)
         except ValueError:
-            raise aiohttp.web.HTTPBadRequest(reason="size is not a valid number")
+            raise aiohttp.web.HTTPBadRequest(reason="size is not a valid number") from None
         if size < 10 or size > 1000:
             raise aiohttp.web.HTTPBadRequest(reason="size must be between 10 and 1000")
 
+        piece_symbol = request.query.get("piece")
+        if piece_symbol is None:
+            raise aiohttp.web.HTTPBadRequest(reason="piece query parameter is required")
         try:
-            piece_symbol = request.query.get("piece")
-
-            if piece_symbol is None:
-                raise aiohttp.web.HTTPBadRequest(reason="piece query parameter is required")
-            try:
-                piece = chess.Piece.from_symbol(piece_symbol)
-            except ValueError:
-                raise aiohttp.web.HTTPBadRequest(reason="piece is not a valid piece")
+            piece = chess.Piece.from_symbol(piece_symbol)
         except ValueError:
-            raise aiohttp.web.HTTPBadRequest(reason="piece is not a valid piece")
+            raise aiohttp.web.HTTPBadRequest(reason="piece is not a valid piece") from None
 
         piece_svg = svg.piece(piece=piece, size=size, piece_set=piece_set)
 
