@@ -110,7 +110,7 @@ def query_bool(request, name, default=False):
     try:
         return configparser.ConfigParser.BOOLEAN_STATES[value.lower()]
     except KeyError:
-        raise aiohttp.web.HTTPBadRequest(reason=f"{name} must be a boolean")
+        raise aiohttp.web.HTTPBadRequest(reason=f"{name} must be a boolean") from None
 
 
 def select_piece_set(request):
