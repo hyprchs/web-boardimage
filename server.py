@@ -20,6 +20,8 @@
 """An HTTP service that renders chess board images"""
 
 import argparse
+import asyncio
+import configparser
 import aiohttp.web
 import os
 
@@ -99,6 +101,31 @@ def deduplicate_svg_attrs(svg_string: str) -> str:
     return re.sub(PAT, f"<svg {new_attrs}>", svg_string, count=1)
 
 PIECE_SETS = svg.available_piece_sets()
+DEFAULT_PIECE_SET = "cburnett"
+
+
+def query_bool(request, name, default=False):
+    value = request.query.get(name)
+    if value is None:
+        return default
+    try:
+        return configparser.ConfigParser.BOOLEAN_STATES[value.lower()]
+    except KeyError:
+        raise aiohttp.web.HTTPBadRequest(reason=f"{name} must be a boolean") from None
+
+
+def select_piece_set(request):
+    piece_set = request.query.get("pieceSet", DEFAULT_PIECE_SET)
+    if piece_set == "random":
+        if query_bool(request, "avoidMono"):
+            return random.choice([
+                piece_set_name for piece_set_name in PIECE_SETS
+                if piece_set_name != 'mono'
+            ])
+        return random.choice(PIECE_SETS)
+    if piece_set not in PIECE_SETS:
+        raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+    return piece_set
 
 
 def load_theme(name):
@@ -213,14 +240,7 @@ class Service:
 
         orientation = chess.BLACK if request.query.get("orientation", "white") == "black" else chess.WHITE
 
-        AFFIRMATIVE_STRS = [
-            "1",
-            "true",
-            "True",
-            "yes",
-        ]
-
-        coordinates = request.query.get("coordinates", "0") in AFFIRMATIVE_STRS
+        coordinates = query_bool(request, "coordinates")
 
         try:
             if request.query.get("colors") == "random":
@@ -230,18 +250,7 @@ class Service:
         except KeyError:
             raise aiohttp.web.HTTPBadRequest(reason="theme colors not found")
 
-        try:
-            if request.query.get("pieceSet") == "random":
-                if request.query.get('avoidMono', 'false') in AFFIRMATIVE_STRS:
-                    piece_set = random.choice([set for set in PIECE_SETS if set != 'mono'])
-                else:
-                    piece_set = random.choice(PIECE_SETS)
-            else:
-                piece_set = request.query.get("pieceSet", "merida")
-                if piece_set not in PIECE_SETS:
-                    raise ValueError
-        except ValueError:
-            raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
+        piece_set = select_piece_set(request)
 
         return deduplicate_svg_attrs(
             svg.board(
@@ -258,6 +267,46 @@ class Service:
             )
         )
 
+    def make_piece_svg(self, request):
+        piece_set = select_piece_set(request)
+
+        try:
+            raw_size = request.query.get("size")
+            if raw_size is None:
+                raise aiohttp.web.HTTPBadRequest(reason="size query parameter is required")
+            size = int(raw_size)
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="size is not a valid number") from None
+        if size < 10 or size > 1000:
+            raise aiohttp.web.HTTPBadRequest(reason="size must be between 10 and 1000")
+
+        piece_symbol = request.query.get("piece")
+        if piece_symbol is None:
+            raise aiohttp.web.HTTPBadRequest(reason="piece query parameter is required")
+        try:
+            piece = chess.Piece.from_symbol(piece_symbol)
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="piece is not a valid piece") from None
+
+        piece_svg = svg.piece(piece=piece, size=size, piece_set=piece_set)
+
+        return deduplicate_svg_attrs(piece_svg)
+
+    async def render_piece_png(self, request):
+        svg_data = self.make_piece_svg(request)
+        png_data = await asyncio.to_thread(cairosvg.svg2png, bytestring=svg_data)
+        filename = request.query.get("piece", "ERROR")
+        return aiohttp.web.Response(
+            body=png_data,
+            content_type="image/png",
+            headers={"Content-Disposition": f"attachment; filename={filename}.png"},
+        )
+
+    async def render_piece_svg(self, request):
+        return aiohttp.web.Response(
+            text=self.make_piece_svg(request), content_type="image/svg+xml"
+        )
+
     async def render_svg(self, request):
         return aiohttp.web.Response(
             text=self.make_svg(request), content_type="image/svg+xml"
@@ -265,7 +314,7 @@ class Service:
 
     async def render_png(self, request):
         svg_data = self.make_svg(request)
-        png_data = cairosvg.svg2png(bytestring=svg_data)
+        png_data = await asyncio.to_thread(cairosvg.svg2png, bytestring=svg_data)
         return aiohttp.web.Response(body=png_data, content_type="image/png")
 
 
@@ -281,5 +330,7 @@ if __name__ == "__main__":
     service = Service()
     app.router.add_get("/board.png", service.render_png)
     app.router.add_get("/board.svg", service.render_svg)
+    app.router.add_get("/piece.png", service.render_piece_png)
+    app.router.add_get("/piece.svg", service.render_piece_svg)
 
     aiohttp.web.run_app(app, port=args.port, host=args.bind, access_log=None)
