@@ -20,6 +20,7 @@
 """An HTTP service that renders chess board images"""
 
 import argparse
+import asyncio
 import configparser
 import aiohttp.web
 import os
@@ -297,7 +298,7 @@ class Service:
 
     async def render_piece_png(self, request):
         svg_data = self.make_piece_svg(request)
-        png_data = cairosvg.svg2png(bytestring=svg_data)
+        png_data = await asyncio.to_thread(cairosvg.svg2png, bytestring=svg_data)
         filename = request.query.get("piece", "ERROR")
         return aiohttp.web.Response(
             body=png_data,
@@ -317,7 +318,7 @@ class Service:
 
     async def render_png(self, request):
         svg_data = self.make_svg(request)
-        png_data = cairosvg.svg2png(bytestring=svg_data)
+        png_data = await asyncio.to_thread(cairosvg.svg2png, bytestring=svg_data)
         return aiohttp.web.Response(body=png_data, content_type="image/png")
 
 
