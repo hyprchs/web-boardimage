@@ -77,7 +77,7 @@ name | type | default | description
 <details>
 <summary>Show all supported piece sets</summary>
 
-Omit `pieceSet` to use `cburnett`. Use `random` to choose a piece set at render time.
+The default piece set is `cburnett`. Use `random` to choose a piece set at render time.
 
 `alpha`, `anarcandy`, `caliente`, `california`, `cardinal`, `cburnett`, `celtic`, `chess7`, `chessnut`, `companion`, `cooke`, `dubrovny`, `fantasy`, `fresca`, `gioco`, `governor`, `horsey`, `icpieces`, `kiwen-suwi`, `kosal`, `leipzig`, `letter`, `libra`, `maestro`, `merida`, `monarchy`, `mono`, `mpchess`, `pirouetti`, `pixel`, `reillycraig`, `riohacha`, `shapes`, `spatial`, `staunty`, `tatiana`, `random`
 
