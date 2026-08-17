@@ -6,10 +6,9 @@ An HTTP service that renders chess board images.
 Installation
 ------------
 
-Requires Python, [uv](https://docs.astral.sh/uv/), and these libraries:
+Requires Python and [uv](https://docs.astral.sh/uv/):
 
 ```
-sudo apt-get install python3-dev libffi-dev libxml2-dev libxslt1-dev libcairo2
 git submodule update --init --recursive
 ```
 

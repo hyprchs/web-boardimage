@@ -6,17 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# CairoSVG runtime dependencies.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcairo2 \
-    libffi8 \
-    libgdk-pixbuf-2.0-0 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libxml2 \
-    libxslt1.1 \
-  && rm -rf /var/lib/apt/lists/*
-
 COPY --from=ghcr.io/astral-sh/uv:0.12.2 /uv /uvx /bin/
 
 # Install deps first for better layer caching.
