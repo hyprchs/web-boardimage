@@ -1,5 +1,4 @@
 import struct
-import unittest
 import zlib
 
 import chess
@@ -40,9 +39,8 @@ def has_nontransparent_pixel(png_data: bytes) -> bool:
     )
 
 
-class TestRendering(unittest.TestCase):
-    def test_renders_piece_with_physical_dimensions(self) -> None:
-        svg_data = chess.svg.piece(
-            chess.Piece.from_symbol("P"), size=189, piece_set="dubrovny"
-        )
-        self.assertTrue(has_nontransparent_pixel(render_svg_to_png(svg_data)))
+def test_renders_piece_with_physical_dimensions() -> None:
+    svg_data = chess.svg.piece(
+        chess.Piece.from_symbol("P"), size=189, piece_set="dubrovny"
+    )
+    assert has_nontransparent_pixel(render_svg_to_png(svg_data))

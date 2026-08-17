@@ -13,5 +13,14 @@ dependencies = [
     "resvg_py==0.3.3",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
 [tool.uv.sources]
 chess = { path = "python-chess", editable = true }
