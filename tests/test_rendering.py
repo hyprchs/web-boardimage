@@ -1,46 +1,138 @@
-import struct
-import zlib
+import asyncio
+from hashlib import sha256
+from io import BytesIO
+from urllib.parse import urlencode
+from xml.etree import ElementTree
 
-import chess
-import chess.svg
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
+from PIL import Image, ImageChops
+from server import create_app
 
-from server import render_svg_to_png
+EMPTY_FEN = "8/8/8/8/8/8/8/8 w - - 0 1"
+PAWN_FEN = "8/8/8/8/4P3/8/8/8 w - - 0 1"
+BOARD_SIZE = 360
+SQUARE_SIZE = BOARD_SIZE // 8
+DUBROVNY_PAWN_SIZE = 189
+CARDINAL_KING_SIZE = 180
+# Human-reviewed Cardinal rendering baseline. The previous renderer differs.
+CARDINAL_WHITE_KING_PIXELS_SHA256 = (
+    "e7586682f682a5e4250081677220980895eeec6122f2accb7ea237525a11fd7b"
+)
 
 
-def has_nontransparent_pixel(png_data: bytes) -> bool:
-    offset = 8
-    image_data = []
+def request_url(path, **query):
+    return f"{path}?{urlencode(query)}" if query else path
 
-    while offset < len(png_data):
-        chunk_size = struct.unpack_from(">I", png_data, offset)[0]
-        chunk_type = png_data[offset + 4 : offset + 8]
-        chunk_data = png_data[offset + 8 : offset + 8 + chunk_size]
-        offset += chunk_size + 12
 
-        if chunk_type == b"IHDR":
-            width, height, bit_depth, color_type, _, _, interlace = struct.unpack(
-                ">IIBBBBB", chunk_data
-            )
-            if (bit_depth, color_type, interlace) != (8, 6, 0):
-                raise AssertionError("expected a non-interlaced 8-bit RGBA PNG")
-        elif chunk_type == b"IDAT":
-            image_data.append(chunk_data)
+async def fetch_response(path):
+    async with TestClient(TestServer(create_app())) as client:
+        response = await client.get(path)
+        return response.status, response.content_type, await response.read()
 
-    scanline_size = 1 + width * 4
-    scanlines = zlib.decompress(b"".join(image_data))
-    if len(scanlines) != height * scanline_size:
-        raise AssertionError("invalid PNG scanline data length")
-    # PNG filters operate independently per byte position, so nonzero alpha
-    # survives in at least one filtered alpha byte.
-    return any(
-        alpha
-        for row_start in range(0, len(scanlines), scanline_size)
-        for alpha in scanlines[row_start + 4 : row_start + scanline_size : 4]
+
+def get_response(path):
+    return asyncio.run(fetch_response(path))
+
+
+def decode_png(png_data):
+    return Image.open(BytesIO(png_data)).convert("RGBA")
+
+
+@pytest.mark.parametrize(
+    ("orientation", "square_origin"),
+    [
+        ("white", (4 * SQUARE_SIZE, 4 * SQUARE_SIZE)),
+        ("black", (3 * SQUARE_SIZE, 3 * SQUARE_SIZE)),
+    ],
+)
+def test_board_svg_places_piece_on_expected_square(orientation, square_origin):
+    status, content_type, svg_data = get_response(
+        request_url("/board.svg", fen=PAWN_FEN, size=BOARD_SIZE, orientation=orientation)
     )
 
+    assert status == 200
+    assert content_type == "image/svg+xml"
+    root = ElementTree.fromstring(svg_data)
+    x, y = square_origin
+    assert [
+        element.attrib["transform"]
+        for element in root.iter()
+        if element.tag.endswith("use") and element.attrib.get("href") == "#piece-wP"
+    ] == [f"translate({x}, {y})"]
 
-def test_renders_piece_with_physical_dimensions() -> None:
-    svg_data = chess.svg.piece(
-        chess.Piece.from_symbol("P"), size=189, piece_set="dubrovny"
+
+@pytest.mark.parametrize(
+    ("orientation", "square_origin"),
+    [
+        ("white", (4 * SQUARE_SIZE, 4 * SQUARE_SIZE)),
+        ("black", (3 * SQUARE_SIZE, 3 * SQUARE_SIZE)),
+    ],
+)
+def test_board_png_changes_only_the_piece_square(orientation, square_origin):
+    query = {"size": BOARD_SIZE, "orientation": orientation}
+    status, content_type, empty_png = get_response(
+        request_url("/board.png", fen=EMPTY_FEN, **query)
     )
-    assert has_nontransparent_pixel(render_svg_to_png(svg_data))
+    assert status == 200
+    assert content_type == "image/png"
+
+    status, content_type, pawn_png = get_response(
+        request_url("/board.png", fen=PAWN_FEN, **query)
+    )
+    assert status == 200
+    assert content_type == "image/png"
+
+    empty_image = decode_png(empty_png)
+    pawn_image = decode_png(pawn_png)
+    assert empty_image.size == pawn_image.size == (BOARD_SIZE, BOARD_SIZE)
+    changed_bounds = ImageChops.difference(pawn_image, empty_image).convert("RGB").getbbox()
+    assert changed_bounds is not None
+    left, top, right, bottom = changed_bounds
+    x, y = square_origin
+    assert x <= left < right <= x + SQUARE_SIZE
+    assert y <= top < bottom <= y + SQUARE_SIZE
+
+
+def test_dubrovny_piece_png_is_visible_at_requested_size():
+    status, content_type, png_data = get_response(
+        request_url(
+            "/piece.png", piece="P", size=DUBROVNY_PAWN_SIZE, pieceSet="dubrovny"
+        )
+    )
+
+    assert status == 200
+    assert content_type == "image/png"
+    rendered = decode_png(png_data)
+    assert rendered.size == (DUBROVNY_PAWN_SIZE, DUBROVNY_PAWN_SIZE)
+    assert rendered.getchannel("A").getbbox() is not None
+
+
+def test_cardinal_king_png_matches_reviewed_rendering():
+    status, content_type, png_data = get_response(
+        request_url(
+            "/piece.png", piece="K", size=CARDINAL_KING_SIZE, pieceSet="cardinal"
+        )
+    )
+
+    assert status == 200
+    assert content_type == "image/png"
+    rendered = decode_png(png_data)
+    assert rendered.size == (CARDINAL_KING_SIZE, CARDINAL_KING_SIZE)
+    assert sha256(rendered.tobytes()).hexdigest() == CARDINAL_WHITE_KING_PIXELS_SHA256
+
+
+@pytest.mark.parametrize(
+    ("path", "query"),
+    [
+        ("/board.svg", {}),
+        ("/board.svg", {"fen": PAWN_FEN, "coordinates": "perhaps"}),
+        ("/piece.png", {"piece": "X", "size": 180}),
+        ("/piece.png", {"piece": "P", "size": 9}),
+        ("/piece.png", {"piece": "P", "size": 180, "pieceSet": "unknown"}),
+    ],
+)
+def test_invalid_request_returns_bad_request(path, query):
+    status, _, _ = get_response(request_url(path, **query))
+
+    assert status == 400

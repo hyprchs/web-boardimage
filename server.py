@@ -323,6 +323,16 @@ class Service:
         return aiohttp.web.Response(body=png_data, content_type="image/png")
 
 
+def create_app():
+    app = aiohttp.web.Application()
+    service = Service()
+    app.router.add_get("/board.png", service.render_png)
+    app.router.add_get("/board.svg", service.render_svg)
+    app.router.add_get("/piece.png", service.render_piece_png)
+    app.router.add_get("/piece.svg", service.render_piece_svg)
+    return app
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", "-p", type=int, default=8080, help="web server port")
@@ -331,11 +341,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    app = aiohttp.web.Application()
-    service = Service()
-    app.router.add_get("/board.png", service.render_png)
-    app.router.add_get("/board.svg", service.render_svg)
-    app.router.add_get("/piece.png", service.render_piece_png)
-    app.router.add_get("/piece.svg", service.render_piece_svg)
-
-    aiohttp.web.run_app(app, port=args.port, host=args.bind, access_log=None)
+    aiohttp.web.run_app(create_app(), port=args.port, host=args.bind, access_log=None)
