@@ -143,7 +143,6 @@ THEMES = {
 }
 
 
-# Function to generate a random color
 def generate_random_color():
     h = random.random()
     s = random.uniform(0.5, 1.0)
@@ -151,28 +150,24 @@ def generate_random_color():
     return colorsys.hsv_to_rgb(h, s, v)
 
 
-# Function to convert RGB to HEX
 def rgb_to_hex(rgb):
     return "#{:02x}{:02x}{:02x}".format(
         int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255)
     )
 
 
-# Function to adjust brightness
 def adjust_brightness(color, factor):
     h, s, v = colorsys.rgb_to_hsv(color[0], color[1], color[2])
     v = max(0, min(1, v * factor))
     return colorsys.hsv_to_rgb(h, s, v)
 
 
-# Function to shift hue
 def shift_hue(color, shift):
     h, s, v = colorsys.rgb_to_hsv(color[0], color[1], color[2])
     h = (h + shift) % 1.0
     return colorsys.hsv_to_rgb(h, s, v)
 
 
-# Function to generate a color scheme
 def generate_color_scheme():
     light_square_color = generate_random_color()
     dark_square_color = adjust_brightness(
