@@ -241,6 +241,9 @@ class Service:
         orientation = chess.BLACK if request.query.get("orientation", "white") == "black" else chess.WHITE
 
         coordinates = query_bool(request, "coordinates")
+        arrow_style = request.query.get("arrowStyle", "lichess")
+        if arrow_style not in ("lichess", "chess.com"):
+            raise aiohttp.web.HTTPBadRequest(reason="arrowStyle is not supported")
 
         try:
             if request.query.get("colors") == "random":
@@ -260,6 +263,7 @@ class Service:
                 lastmove=lastmove,
                 check=check,
                 arrows=arrows,
+                arrow_style=arrow_style,
                 squares=squares,
                 size=size,
                 colors=colors,

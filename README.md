@@ -50,6 +50,7 @@ name | type | default | description
 **lastMove** | string | *(none)* | The last move to highlight, e.g., `f4g6`
 **check** | string | *(none)* | A square to highlight for check, e.g., `h8`
 **arrows** | string | *(none)* | Draw arrows and circles, e.g., `Ge6g8,Bh7`, possible color prefixes: `G`, `B`, `R`, `Y`
+**arrowStyle** | string | `lichess` | Arrow geometry: `lichess` or `chess.com`
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `random` (generate one on the fly)
