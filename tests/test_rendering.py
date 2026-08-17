@@ -7,8 +7,10 @@ from xml.etree import ElementTree
 import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
+import chess
 from PIL import Image, ImageChops
 from server import Service
+from web_boardimage.renderer import render_board_png
 
 EMPTY_FEN = "8/8/8/8/8/8/8/8 w - - 0 1"
 PAWN_FEN = "8/8/8/8/4P3/8/8/8 w - - 0 1"
@@ -131,6 +133,20 @@ def test_cardinal_king_png_matches_reviewed_rendering():
     rendered = decode_png(png_data)
     assert rendered.size == (CARDINAL_KING_SIZE, CARDINAL_KING_SIZE)
     assert sha256(rendered.tobytes()).hexdigest() == CARDINAL_WHITE_KING_PIXELS_SHA256
+
+
+def test_renderer_accepts_custom_board_colors():
+    rendered = decode_png(
+        render_board_png(
+            chess.Board(EMPTY_FEN),
+            size=BOARD_SIZE,
+            coordinates=False,
+            colors={"square light": "#010203", "square dark": "#040506"},
+        )
+    )
+
+    assert rendered.getpixel((0, 0)) == (1, 2, 3, 255)
+    assert rendered.getpixel((SQUARE_SIZE, 0)) == (4, 5, 6, 255)
 
 
 @pytest.mark.parametrize(

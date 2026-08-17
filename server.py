@@ -31,81 +31,17 @@ import chess.svg as svg
 import json
 import random
 import colorsys
-from collections import deque
-import re
-import resvg_py
+from web_boardimage.renderer import (
+    available_piece_sets,
+    render_board_svg,
+    render_piece_svg,
+    render_svg_to_png,
+)
 
 THIS_DIR = os.path.dirname(__file__)
 
 
-def render_svg_to_png(svg_data: str) -> bytes:
-    # CSS defines 96 pixels per inch; bundled piece SVGs use mm and pt sizes.
-    return resvg_py.svg_to_bytes(svg_string=svg_data, dpi=96)
-
-
-def split_not_in_quotes(
-    s: str, delim: str = " ", quotes: list[tuple[str, str]] | None = None
-) -> list[str]:
-    """
-    Split a string on a delimeter if the delimeter is not inside a pair of quotes.
-    """
-    if quotes is None:
-        quotes = [('"', '"'), ("'", "'")]
-
-    # Validate that the 'quotes' are all 1 character long
-    assert all(
-        len(q[0]) == 1 and len(q[1]) == 1 for q in quotes
-    ), "All quotes must be exactly 1 character long"
-
-    # Loop through the string and keep track of whether we are inside a quoted string using a stack
-    stack = deque()
-    splits = []
-    current_split = []
-
-    for char in s:
-        if not stack and char == delim:
-            splits.append("".join(current_split))
-            current_split = []
-        else:
-            current_split.append(char)
-
-        if stack and char == stack[-1]:
-            stack.pop()
-        elif not stack:
-            for open_quote, close_quote in quotes:
-                if char == open_quote:
-                    stack.append(close_quote)
-                    break
-
-    # Add the last split
-    if current_split:
-        splits.append("".join(current_split))
-
-    return splits
-
-
-def deduplicate_svg_attrs(svg_string: str) -> str:
-    """Deduplicate the attributes in the outer `<svg>` tag in the given SVG string."""
-
-    # We just want to match the very first <svg> opening tag, ex:
-    # <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 45 45">
-    # Then we do a simple string manipulation to remove duplicate attributes
-    PAT = re.compile(r"<svg ?([^>]*)>")
-    svg_attrs = re.match(PAT, svg_string).group(1)
-
-    # We shouldn't assume the attributes' values are always the same even if the attribute names are the same.
-    # However, if there are two attributes with the same name, the one that will be used is the last one, so
-    # as we iterate through the attrs, we can always overwrite the previous value.
-    attrs = {}
-    for attr in split_not_in_quotes(svg_attrs):
-        key, value = attr.split("=", 1)
-        attrs[key] = value
-
-    # Reconstruct the attributes string
-    new_attrs = " ".join([f"{key}={value}" for key, value in attrs.items()])
-    return re.sub(PAT, f"<svg {new_attrs}>", svg_string, count=1)
-
-PIECE_SETS = svg.available_piece_sets()
+PIECE_SETS = available_piece_sets()
 DEFAULT_PIECE_SET = "cburnett"
 
 
@@ -252,19 +188,17 @@ class Service:
 
         piece_set = select_piece_set(request)
 
-        return deduplicate_svg_attrs(
-            svg.board(
-                board,
-                coordinates=coordinates,
-                orientation=orientation,
-                lastmove=lastmove,
-                check=check,
-                arrows=arrows,
-                squares=squares,
-                size=size,
-                colors=colors,
-                piece_set=piece_set,
-            )
+        return render_board_svg(
+            board,
+            coordinates=coordinates,
+            orientation=orientation,
+            lastmove=lastmove,
+            check=check,
+            arrows=arrows,
+            squares=squares,
+            size=size,
+            colors=colors,
+            piece_set=piece_set,
         )
 
     def make_piece_svg(self, request):
@@ -288,9 +222,7 @@ class Service:
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="piece is not a valid piece") from None
 
-        piece_svg = svg.piece(piece=piece, size=size, piece_set=piece_set)
-
-        return deduplicate_svg_attrs(piece_svg)
+        return render_piece_svg(piece=piece, size=size, piece_set=piece_set)
 
     async def render_piece_png(self, request):
         svg_data = self.make_piece_svg(request)

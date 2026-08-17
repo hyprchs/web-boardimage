@@ -19,6 +19,12 @@ Usage
 uv run python server.py [--port 8080] [--bind 127.0.0.1]
 ```
 
+Python API
+----------
+
+For in-process rendering, use `web_boardimage.renderer.render_board_png()` or
+`render_piece_png()` instead of starting the HTTP service.
+
 Docker
 ------
 

@@ -10,6 +10,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.12.2 /uv /uvx /bin/
 
 # Install deps first for better layer caching.
 COPY pyproject.toml uv.lock ./
+COPY web_boardimage ./web_boardimage
 COPY python-chess ./python-chess
 
 RUN uv sync --locked --no-dev
