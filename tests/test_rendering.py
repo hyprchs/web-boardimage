@@ -134,10 +134,32 @@ def test_cardinal_king_png_matches_reviewed_rendering():
 
 
 @pytest.mark.parametrize(
+    ("arrow_style", "expected_class"),
+    [("lichess", "arrow lichess"), ("chess.com", "arrow chess-com")],
+)
+def test_board_svg_uses_requested_arrow_style(arrow_style, expected_class):
+    status, content_type, svg_data = get_response(
+        request_url(
+            "/board.svg",
+            fen=EMPTY_FEN,
+            size=BOARD_SIZE,
+            arrows="Ge2e4",
+            arrowStyle=arrow_style,
+        )
+    )
+
+    assert status == 200
+    assert content_type == "image/svg+xml"
+    root = ElementTree.fromstring(svg_data)  # noqa: S314 - local test-app response
+    assert any(element.attrib.get("class") == expected_class for element in root.iter())
+
+
+@pytest.mark.parametrize(
     ("path", "query"),
     [
         ("/board.svg", {}),
         ("/board.svg", {"fen": PAWN_FEN, "coordinates": "perhaps"}),
+        ("/board.svg", {"fen": PAWN_FEN, "arrowStyle": "unknown"}),
         ("/piece.png", {"piece": "X", "size": 180}),
         ("/piece.png", {"piece": "P", "size": 9}),
         ("/piece.png", {"piece": "P", "size": 180, "pieceSet": "unknown"}),
