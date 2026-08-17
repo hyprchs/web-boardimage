@@ -6,12 +6,21 @@ readme = "README.md"
 authors = [
     { name = "Niklas Fiekas", email = "niklas.fiekas@backscattering.de" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "aiohttp~=3.14.3",
     "chess~=1.11.2",
-    "CairoSVG~=2.9.0",
+    "resvg_py==0.3.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
 
 [tool.uv.sources]
 chess = { path = "python-chess", editable = true }

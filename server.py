@@ -28,14 +28,19 @@ import os
 import chess
 import chess.svg as svg
 
-import cairosvg
 import json
 import random
 import colorsys
 from collections import deque
 import re
+import resvg_py
 
 THIS_DIR = os.path.dirname(__file__)
+
+
+def render_svg_to_png(svg_data: str) -> bytes:
+    # CSS defines 96 pixels per inch; bundled piece SVGs use mm and pt sizes.
+    return resvg_py.svg_to_bytes(svg_string=svg_data, dpi=96)
 
 
 def split_not_in_quotes(
@@ -294,7 +299,7 @@ class Service:
 
     async def render_piece_png(self, request):
         svg_data = self.make_piece_svg(request)
-        png_data = await asyncio.to_thread(cairosvg.svg2png, bytestring=svg_data)
+        png_data = await asyncio.to_thread(render_svg_to_png, svg_data)
         filename = request.query.get("piece", "ERROR")
         return aiohttp.web.Response(
             body=png_data,
@@ -314,7 +319,7 @@ class Service:
 
     async def render_png(self, request):
         svg_data = self.make_svg(request)
-        png_data = await asyncio.to_thread(cairosvg.svg2png, bytestring=svg_data)
+        png_data = await asyncio.to_thread(render_svg_to_png, svg_data)
         return aiohttp.web.Response(body=png_data, content_type="image/png")
 
 
