@@ -64,7 +64,7 @@ def test_board_svg_places_piece_on_expected_square(orientation, square_origin):
 
     assert status == 200
     assert content_type == "image/svg+xml"
-    root = ElementTree.fromstring(svg_data)
+    root = ElementTree.fromstring(svg_data)  # noqa: S314 - local test-app response
     x, y = square_origin
     assert [
         element.attrib["transform"]
