@@ -5,9 +5,10 @@ from urllib.parse import urlencode
 from xml.etree import ElementTree
 
 import pytest
+from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from PIL import Image, ImageChops
-from server import create_app
+from server import Service
 
 EMPTY_FEN = "8/8/8/8/8/8/8/8 w - - 0 1"
 PAWN_FEN = "8/8/8/8/4P3/8/8/8 w - - 0 1"
@@ -25,8 +26,18 @@ def request_url(path, **query):
     return f"{path}?{urlencode(query)}" if query else path
 
 
+def create_test_app():
+    app = web.Application()
+    service = Service()
+    app.router.add_get("/board.png", service.render_png)
+    app.router.add_get("/board.svg", service.render_svg)
+    app.router.add_get("/piece.png", service.render_piece_png)
+    app.router.add_get("/piece.svg", service.render_piece_svg)
+    return app
+
+
 async def fetch_response(path):
-    async with TestClient(TestServer(create_app())) as client:
+    async with TestClient(TestServer(create_test_app())) as client:
         response = await client.get(path)
         return response.status, response.content_type, await response.read()
 
