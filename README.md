@@ -53,7 +53,7 @@ name | type | default | description
 **arrowStyle** | string | `lichess` | Arrow geometry: `lichess` or `chess.com`
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
-**colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `random` (generate one on the fly)
+**colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `chess-com`, `random` (generate one on the fly)
 **pieceSet** | string | `cburnett` | Optional piece set; see [supported piece sets](#supported-piece-sets)
 **avoidMono** | bool | *false* | Exclude `mono` when `pieceSet=random`
 

@@ -139,7 +139,8 @@ def load_theme(name):
 
 
 THEMES = {
-    name: load_theme(name) for name in ["wikipedia", "lichess-blue", "lichess-brown"]
+    name: load_theme(name)
+    for name in ["wikipedia", "lichess-blue", "lichess-brown", "chess-com"]
 }
 
 
