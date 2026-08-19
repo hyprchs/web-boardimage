@@ -154,6 +154,25 @@ def test_board_svg_uses_requested_arrow_style(arrow_style, expected_class):
     assert any(element.attrib.get("class") == expected_class for element in root.iter())
 
 
+def test_board_svg_uses_chess_com_colors():
+    status, content_type, svg_data = get_response(
+        request_url(
+            "/board.svg",
+            fen=PAWN_FEN,
+            size=BOARD_SIZE,
+            lastMove="e3e4",
+            colors="chess-com",
+        )
+    )
+
+    assert status == 200
+    assert content_type == "image/svg+xml"
+    assert all(
+        color in svg_data
+        for color in (b"#ebecd0", b"#779556", b"#f5f682", b"#b9ca43")
+    )
+
+
 @pytest.mark.parametrize(
     ("path", "query"),
     [
