@@ -1,4 +1,5 @@
 import asyncio
+import json
 from hashlib import sha256
 from io import BytesIO
 from urllib.parse import urlencode
@@ -12,6 +13,7 @@ from server import Service
 
 EMPTY_FEN = "8/8/8/8/8/8/8/8 w - - 0 1"
 PAWN_FEN = "8/8/8/8/4P3/8/8/8 w - - 0 1"
+LEGAL_HINT_FEN = "4k3/8/5p2/8/4N3/8/8/4K3 w - - 0 1"
 BOARD_SIZE = 360
 SQUARE_SIZE = BOARD_SIZE // 8
 DUBROVNY_PAWN_SIZE = 189
@@ -31,6 +33,7 @@ def create_test_app():
     service = Service()
     app.router.add_get("/board.png", service.render_png)
     app.router.add_get("/board.svg", service.render_svg)
+    app.router.add_get("/board.annotations.json", service.render_annotations)
     app.router.add_get("/piece.png", service.render_piece_png)
     app.router.add_get("/piece.svg", service.render_piece_svg)
     return app
@@ -171,6 +174,54 @@ def test_board_svg_uses_chess_com_colors():
         color in svg_data
         for color in (b"#ebecd0", b"#779556", b"#f5f682", b"#b9ca43")
     )
+
+
+def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
+    query = {
+        "fen": LEGAL_HINT_FEN,
+        "size": BOARD_SIZE,
+        "coordinates": "false",
+        "arrows": "Ge2e4",
+        "arrowStyle": "chess.com",
+        "legalMoves": "e4d6,e4f6",
+        "legalMoveStyle": "chess.com",
+        "userHighlights": "e4:red:lichess",
+    }
+    status, content_type, payload = get_response(
+        request_url("/board.annotations.json", **query)
+    )
+
+    assert status == 200
+    assert content_type == "application/json"
+    response = json.loads(payload)
+    assert response["width"] == response["height"] == BOARD_SIZE
+    assert [overlay["kind"] for overlay in response["overlays"]] == [
+        "legal_destination_dot",
+        "legal_destination_capture",
+        "user_highlight",
+        "arrow",
+    ]
+    assert response["overlays"][2]["color"] == "red"
+    assert response["overlays"][3]["color"] == "green"
+    for overlay in response["overlays"]:
+        left, top, right, bottom = overlay["bbox_xyxy"]
+        assert 0 <= left < right <= BOARD_SIZE
+        assert 0 <= top < bottom <= BOARD_SIZE
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        {"fen": PAWN_FEN, "legalMoveStyle": "unknown"},
+        {"fen": PAWN_FEN, "userHighlights": "e4:red"},
+        {"fen": PAWN_FEN, "legalMoves": "e2e4,d2d4"},
+        {"fen": PAWN_FEN, "legalMoves": "e2e5"},
+    ],
+)
+def test_board_annotations_reject_invalid_overlay_requests(query):
+    status, _, _ = get_response(request_url("/board.annotations.json", **query))
+
+    assert status == 400
 
 
 @pytest.mark.parametrize(

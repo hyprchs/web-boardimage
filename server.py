@@ -193,7 +193,7 @@ def generate_color_scheme():
 
 
 class Service:
-    def make_svg(self, request):
+    def make_board_render(self, request):
         try:
             board = chess.Board(request.query["fen"])
         except KeyError:
@@ -231,6 +231,29 @@ class Service:
             raise aiohttp.web.HTTPBadRequest(reason="invalid arrow")
 
         try:
+            legal_moves = [
+                chess.Move.from_uci(value.strip())
+                for value in request.query.get("legalMoves", "").split(",")
+                if value.strip()
+            ]
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="legalMoves contains an invalid uci move")
+
+        try:
+            user_highlights = []
+            for token in request.query.get("userHighlights", "").split(","):
+                if not token.strip():
+                    continue
+                square_name, color, palette = token.strip().split(":")
+                user_highlights.append(
+                    svg.UserHighlight(chess.parse_square(square_name), color, palette)
+                )
+        except (TypeError, ValueError):
+            raise aiohttp.web.HTTPBadRequest(
+                reason="userHighlights must use square:color:palette tokens"
+            ) from None
+
+        try:
             squares = chess.SquareSet(
                 chess.parse_square(s.strip())
                 for s in request.query.get("squares", "").split(",")
@@ -245,6 +268,9 @@ class Service:
         arrow_style = request.query.get("arrowStyle", "lichess")
         if arrow_style not in ("lichess", "chess.com"):
             raise aiohttp.web.HTTPBadRequest(reason="arrowStyle is not supported")
+        legal_move_style = request.query.get("legalMoveStyle", "lichess")
+        if legal_move_style not in ("lichess", "chess.com"):
+            raise aiohttp.web.HTTPBadRequest(reason="legalMoveStyle is not supported")
 
         try:
             if request.query.get("colors") == "random":
@@ -256,8 +282,8 @@ class Service:
 
         piece_set = select_piece_set(request)
 
-        return deduplicate_svg_attrs(
-            svg.board(
+        try:
+            rendered = svg.board_with_annotations(
                 board,
                 coordinates=coordinates,
                 orientation=orientation,
@@ -269,8 +295,31 @@ class Service:
                 size=size,
                 colors=colors,
                 piece_set=piece_set,
+                legal_moves=legal_moves,
+                legal_move_style=legal_move_style,
+                user_highlights=user_highlights,
             )
-        )
+        except (TypeError, ValueError) as error:
+            raise aiohttp.web.HTTPBadRequest(reason=str(error)) from None
+        return rendered, size
+
+    def make_svg(self, request):
+        rendered, _ = self.make_board_render(request)
+        return deduplicate_svg_attrs(rendered.svg)
+
+    def make_annotations(self, request):
+        rendered, size = self.make_board_render(request)
+        scale = size / rendered.viewbox_size
+        overlays = []
+        for annotation in rendered.annotations:
+            payload = {
+                "kind": annotation.kind,
+                "bbox_xyxy": [round(value * scale, 6) for value in annotation.bbox_xyxy],
+            }
+            if annotation.color is not None:
+                payload["color"] = annotation.color
+            overlays.append(payload)
+        return {"width": size, "height": size, "overlays": overlays}
 
     def make_piece_svg(self, request):
         piece_set = select_piece_set(request)
@@ -322,6 +371,9 @@ class Service:
         png_data = await asyncio.to_thread(render_svg_to_png, svg_data)
         return aiohttp.web.Response(body=png_data, content_type="image/png")
 
+    async def render_annotations(self, request):
+        return aiohttp.web.json_response(self.make_annotations(request))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -335,6 +387,7 @@ if __name__ == "__main__":
     service = Service()
     app.router.add_get("/board.png", service.render_png)
     app.router.add_get("/board.svg", service.render_svg)
+    app.router.add_get("/board.annotations.json", service.render_annotations)
     app.router.add_get("/piece.png", service.render_piece_png)
     app.router.add_get("/piece.svg", service.render_piece_svg)
 
