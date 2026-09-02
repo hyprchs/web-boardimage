@@ -205,6 +205,8 @@ def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
     assert response["overlays"][3]["color"] == "green"
     assert response["overlays"][3]["tail_xy"] == [202.5, 292.5]
     assert response["overlays"][3]["head_xy"] == [202.5, 202.5]
+    anchor_bbox = response["overlays"][3]["anchor_bbox_xyxy"]
+    assert anchor_bbox[3] - anchor_bbox[1] < BOARD_SIZE / 8
     arrow_obb = response["overlays"][3]["obb_xyxyxyxy"]
     assert len(arrow_obb) == 4
     assert all(len(point) == 2 for point in arrow_obb)
