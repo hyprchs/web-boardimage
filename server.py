@@ -322,6 +322,11 @@ class Service:
                 payload["tail_xy"] = [round(value * scale, 6) for value in annotation.tail_xy]
             if annotation.head_xy is not None:
                 payload["head_xy"] = [round(value * scale, 6) for value in annotation.head_xy]
+            if annotation.obb_xyxyxyxy is not None:
+                payload["obb_xyxyxyxy"] = [
+                    [round(coordinate * scale, 6) for coordinate in point]
+                    for point in annotation.obb_xyxyxyxy
+                ]
             overlays.append(payload)
         return {"width": size, "height": size, "overlays": overlays}
 
