@@ -203,6 +203,8 @@ def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
     ]
     assert response["overlays"][2]["color"] == "red"
     assert response["overlays"][3]["color"] == "green"
+    assert response["overlays"][3]["tail_xy"] == [202.5, 292.5]
+    assert response["overlays"][3]["head_xy"] == [202.5, 202.5]
     for overlay in response["overlays"]:
         left, top, right, bottom = overlay["bbox_xyxy"]
         assert 0 <= left < right <= BOARD_SIZE

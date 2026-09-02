@@ -318,6 +318,10 @@ class Service:
             }
             if annotation.color is not None:
                 payload["color"] = annotation.color
+            if annotation.tail_xy is not None:
+                payload["tail_xy"] = [round(value * scale, 6) for value in annotation.tail_xy]
+            if annotation.head_xy is not None:
+                payload["head_xy"] = [round(value * scale, 6) for value in annotation.head_xy]
             overlays.append(payload)
         return {"width": size, "height": size, "overlays": overlays}
 
