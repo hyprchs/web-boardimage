@@ -119,15 +119,22 @@ def query_bool(request, name, default=False):
         raise aiohttp.web.HTTPBadRequest(reason=f"{name} must be a boolean") from None
 
 
-def select_piece_set(request):
+def request_rng(request):
+    seed = request.query.get("randomSeed")
+    try:
+        return random.Random(int(seed)) if seed is not None else random
+    except ValueError:
+        raise aiohttp.web.HTTPBadRequest(reason="randomSeed must be an integer") from None
+
+
+def select_piece_set(request, rng=random):
     piece_set = request.query.get("pieceSet", DEFAULT_PIECE_SET)
     if piece_set == "random":
         if query_bool(request, "avoidMono"):
-            return random.choice([
-                piece_set_name for piece_set_name in PIECE_SETS
-                if piece_set_name != 'mono'
-            ])
-        return random.choice(PIECE_SETS)
+            return rng.choice(
+                [piece_set_name for piece_set_name in PIECE_SETS if piece_set_name != "mono"]
+            )
+        return rng.choice(PIECE_SETS)
     if piece_set not in PIECE_SETS:
         raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
     return piece_set
@@ -194,6 +201,7 @@ def generate_color_scheme(rng=random):
 
 class Service:
     def make_board_render(self, request):
+        rng = request_rng(request)
         try:
             board = chess.Board(request.query["fen"])
         except KeyError:
@@ -274,20 +282,13 @@ class Service:
 
         try:
             if request.query.get("colors") == "random":
-                color_seed = request.query.get("colorSeed")
-                try:
-                    rng = random.Random(int(color_seed)) if color_seed is not None else random
-                except ValueError:
-                    raise aiohttp.web.HTTPBadRequest(
-                        reason="colorSeed must be an integer"
-                    ) from None
                 colors = generate_color_scheme(rng)
             else:
                 colors = THEMES[request.query.get("colors", "lichess-brown")]
         except KeyError:
             raise aiohttp.web.HTTPBadRequest(reason="theme colors not found")
 
-        piece_set = select_piece_set(request)
+        piece_set = select_piece_set(request, rng)
 
         try:
             rendered = svg.board_with_annotations(
@@ -342,7 +343,7 @@ class Service:
         return {"width": size, "height": size, "overlays": overlays}
 
     def make_piece_svg(self, request):
-        piece_set = select_piece_set(request)
+        piece_set = select_piece_set(request, request_rng(request))
 
         try:
             raw_size = request.query.get("size")

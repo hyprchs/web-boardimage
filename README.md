@@ -54,7 +54,7 @@ name | type | default | description
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `chess-com`, `random` (generate one on the fly)
-**colorSeed** | int | *(none)* | Make `colors=random` deterministic for a given seed
+**randomSeed** | int | *(none)* | Make all randomized choices deterministic for a given seed
 **pieceSet** | string | `cburnett` | Optional piece set; see [supported piece sets](#supported-piece-sets)
 **avoidMono** | bool | *false* | Exclude `mono` when `pieceSet=random`
 
@@ -72,6 +72,7 @@ name | type | default | description
 --- | --- | --- | ---
 **pieceSet** | string | `cburnett` | Optional piece set; see [supported piece sets](#supported-piece-sets)
 **avoidMono** | bool | *false* | Exclude `mono` when `pieceSet=random`
+**randomSeed** | int | *(none)* | Make all randomized choices deterministic for a given seed
 **piece** | char | required | Piece letter: `p`, `n`, `b`, `r`, `q`, `k` for pawn, knight, bishop, rook, queen, king; uppercase is white, lowercase is black
 **size** | int | required | The width and height of the bounding-box/image/square, from 10 through 1000 pixels inclusive
 

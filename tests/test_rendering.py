@@ -177,11 +177,11 @@ def test_board_svg_uses_chess_com_colors():
 
 
 def test_random_board_colors_are_repeatable_with_a_seed():
-    query = {"fen": EMPTY_FEN, "colors": "random", "colorSeed": 20260808}
+    query = {"fen": EMPTY_FEN, "colors": "random", "randomSeed": 20260808}
 
     first = get_response(request_url("/board.svg", **query))
     second = get_response(request_url("/board.svg", **query))
-    different = get_response(request_url("/board.svg", **{**query, "colorSeed": 20260809}))
+    different = get_response(request_url("/board.svg", **{**query, "randomSeed": 20260809}))
 
     assert first == second
     assert first != different
@@ -189,10 +189,24 @@ def test_random_board_colors_are_repeatable_with_a_seed():
 
 def test_random_board_colors_reject_an_invalid_seed():
     status, _, _ = get_response(
-        request_url("/board.svg", fen=EMPTY_FEN, colors="random", colorSeed="nope")
+        request_url("/board.svg", fen=EMPTY_FEN, colors="random", randomSeed="nope")
     )
 
     assert status == 400
+
+
+def test_random_piece_set_is_repeatable_with_the_request_seed():
+    query = {
+        "fen": PAWN_FEN,
+        "colors": "lichess-brown",
+        "pieceSet": "random",
+        "randomSeed": 20260808,
+    }
+
+    first = get_response(request_url("/board.svg", **query))
+    second = get_response(request_url("/board.svg", **query))
+
+    assert first == second
 
 
 def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
