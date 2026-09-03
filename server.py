@@ -119,15 +119,22 @@ def query_bool(request, name, default=False):
         raise aiohttp.web.HTTPBadRequest(reason=f"{name} must be a boolean") from None
 
 
-def select_piece_set(request):
+def request_rng(request):
+    seed = request.query.get("randomSeed")
+    try:
+        return random.Random(int(seed)) if seed is not None else random
+    except ValueError:
+        raise aiohttp.web.HTTPBadRequest(reason="randomSeed must be an integer") from None
+
+
+def select_piece_set(request, rng=random):
     piece_set = request.query.get("pieceSet", DEFAULT_PIECE_SET)
     if piece_set == "random":
         if query_bool(request, "avoidMono"):
-            return random.choice([
-                piece_set_name for piece_set_name in PIECE_SETS
-                if piece_set_name != 'mono'
-            ])
-        return random.choice(PIECE_SETS)
+            return rng.choice(
+                [piece_set_name for piece_set_name in PIECE_SETS if piece_set_name != "mono"]
+            )
+        return rng.choice(PIECE_SETS)
     if piece_set not in PIECE_SETS:
         raise aiohttp.web.HTTPBadRequest(reason="invalid piece set")
     return piece_set
@@ -144,10 +151,10 @@ THEMES = {
 }
 
 
-def generate_random_color():
-    h = random.random()
-    s = random.uniform(0.5, 1.0)
-    v = random.uniform(0.5, 1.0)
+def generate_random_color(rng=random):
+    h = rng.random()
+    s = rng.uniform(0.5, 1.0)
+    v = rng.uniform(0.5, 1.0)
     return colorsys.hsv_to_rgb(h, s, v)
 
 
@@ -169,8 +176,8 @@ def shift_hue(color, shift):
     return colorsys.hsv_to_rgb(h, s, v)
 
 
-def generate_color_scheme():
-    light_square_color = generate_random_color()
+def generate_color_scheme(rng=random):
+    light_square_color = generate_random_color(rng)
     dark_square_color = adjust_brightness(
         light_square_color, 0.7
     )  # Darker than light square
@@ -193,7 +200,8 @@ def generate_color_scheme():
 
 
 class Service:
-    def make_svg(self, request):
+    def make_board_render(self, request):
+        rng = request_rng(request)
         try:
             board = chess.Board(request.query["fen"])
         except KeyError:
@@ -231,6 +239,29 @@ class Service:
             raise aiohttp.web.HTTPBadRequest(reason="invalid arrow")
 
         try:
+            legal_moves = [
+                chess.Move.from_uci(value.strip())
+                for value in request.query.get("legalMoves", "").split(",")
+                if value.strip()
+            ]
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(reason="legalMoves contains an invalid uci move")
+
+        try:
+            user_highlights = []
+            for token in request.query.get("userHighlights", "").split(","):
+                if not token.strip():
+                    continue
+                square_name, color, palette = token.strip().split(":")
+                user_highlights.append(
+                    svg.UserHighlight(chess.parse_square(square_name), color, palette)
+                )
+        except (TypeError, ValueError):
+            raise aiohttp.web.HTTPBadRequest(
+                reason="userHighlights must use square:color:palette tokens"
+            ) from None
+
+        try:
             squares = chess.SquareSet(
                 chess.parse_square(s.strip())
                 for s in request.query.get("squares", "").split(",")
@@ -245,19 +276,22 @@ class Service:
         arrow_style = request.query.get("arrowStyle", "lichess")
         if arrow_style not in ("lichess", "chess.com"):
             raise aiohttp.web.HTTPBadRequest(reason="arrowStyle is not supported")
+        legal_move_style = request.query.get("legalMoveStyle", "lichess")
+        if legal_move_style not in ("lichess", "chess.com"):
+            raise aiohttp.web.HTTPBadRequest(reason="legalMoveStyle is not supported")
 
         try:
             if request.query.get("colors") == "random":
-                colors = generate_color_scheme()
+                colors = generate_color_scheme(rng)
             else:
                 colors = THEMES[request.query.get("colors", "lichess-brown")]
         except KeyError:
             raise aiohttp.web.HTTPBadRequest(reason="theme colors not found")
 
-        piece_set = select_piece_set(request)
+        piece_set = select_piece_set(request, rng)
 
-        return deduplicate_svg_attrs(
-            svg.board(
+        try:
+            rendered = svg.board_with_annotations(
                 board,
                 coordinates=coordinates,
                 orientation=orientation,
@@ -269,11 +303,47 @@ class Service:
                 size=size,
                 colors=colors,
                 piece_set=piece_set,
+                legal_moves=legal_moves,
+                legal_move_style=legal_move_style,
+                user_highlights=user_highlights,
             )
-        )
+        except (TypeError, ValueError) as error:
+            raise aiohttp.web.HTTPBadRequest(reason=str(error)) from None
+        return rendered, size
+
+    def make_svg(self, request):
+        rendered, _ = self.make_board_render(request)
+        return deduplicate_svg_attrs(rendered.svg)
+
+    def make_annotations(self, request):
+        rendered, size = self.make_board_render(request)
+        scale = size / rendered.viewbox_size
+        overlays = []
+        for annotation in rendered.annotations:
+            payload = {
+                "kind": annotation.kind,
+                "bbox_xyxy": [round(value * scale, 6) for value in annotation.bbox_xyxy],
+            }
+            if annotation.color is not None:
+                payload["color"] = annotation.color
+            if annotation.anchor_bbox_xyxy is not None:
+                payload["anchor_bbox_xyxy"] = [
+                    round(value * scale, 6) for value in annotation.anchor_bbox_xyxy
+                ]
+            if annotation.tail_xy is not None:
+                payload["tail_xy"] = [round(value * scale, 6) for value in annotation.tail_xy]
+            if annotation.head_xy is not None:
+                payload["head_xy"] = [round(value * scale, 6) for value in annotation.head_xy]
+            if annotation.obb_xyxyxyxy is not None:
+                payload["obb_xyxyxyxy"] = [
+                    [round(coordinate * scale, 6) for coordinate in point]
+                    for point in annotation.obb_xyxyxyxy
+                ]
+            overlays.append(payload)
+        return {"width": size, "height": size, "overlays": overlays}
 
     def make_piece_svg(self, request):
-        piece_set = select_piece_set(request)
+        piece_set = select_piece_set(request, request_rng(request))
 
         try:
             raw_size = request.query.get("size")
@@ -322,6 +392,9 @@ class Service:
         png_data = await asyncio.to_thread(render_svg_to_png, svg_data)
         return aiohttp.web.Response(body=png_data, content_type="image/png")
 
+    async def render_annotations(self, request):
+        return aiohttp.web.json_response(self.make_annotations(request))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -335,6 +408,7 @@ if __name__ == "__main__":
     service = Service()
     app.router.add_get("/board.png", service.render_png)
     app.router.add_get("/board.svg", service.render_svg)
+    app.router.add_get("/board.annotations.json", service.render_annotations)
     app.router.add_get("/piece.png", service.render_piece_png)
     app.router.add_get("/piece.svg", service.render_piece_svg)
 
