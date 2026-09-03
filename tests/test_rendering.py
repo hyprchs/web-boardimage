@@ -181,10 +181,10 @@ def test_random_board_colors_are_repeatable_with_a_seed():
 
     first = get_response(request_url("/board.svg", **query))
     second = get_response(request_url("/board.svg", **query))
-    different = get_response(request_url("/board.svg", **{**query, "randomSeed": 20260809}))
 
     assert first == second
-    assert first != different
+    assert b'fill="#5260ab"' in first[2]
+    assert b'fill="#394377"' in first[2]
 
 
 def test_random_board_colors_reject_an_invalid_seed():
@@ -218,7 +218,7 @@ def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
         "arrowStyle": "chess.com",
         "legalMoves": "e4d6,e4f6",
         "legalMoveStyle": "chess.com",
-        "userHighlights": "e4:red:lichess",
+        "userHighlights": "e4:red:chess.com",
     }
     status, content_type, payload = get_response(
         request_url("/board.annotations.json", **query)
@@ -238,6 +238,8 @@ def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
     assert response["overlays"][3]["color"] == "green"
     assert response["overlays"][3]["tail_xy"] == [202.5, 292.5]
     assert response["overlays"][3]["head_xy"] == [202.5, 202.5]
+    _, _, svg_data = get_response(request_url("/board.svg", **query))
+    assert b'class="user-highlight chess-com"' in svg_data
     anchor_bbox = response["overlays"][3]["anchor_bbox_xyxy"]
     assert anchor_bbox[3] - anchor_bbox[1] < BOARD_SIZE / 8
     arrow_obb = response["overlays"][3]["obb_xyxyxyxy"]

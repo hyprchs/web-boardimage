@@ -51,6 +51,9 @@ name | type | default | description
 **check** | string | *(none)* | A square to highlight for check, e.g., `h8`
 **arrows** | string | *(none)* | Draw arrows and circles, e.g., `Ge6g8,Bh7`, possible color prefixes: `G`, `B`, `R`, `Y`
 **arrowStyle** | string | `lichess` | Arrow geometry: `lichess` or `chess.com`
+**legalMoves** | string | *(none)* | Comma-separated legal UCI moves with one source square, e.g., `e2e4,e2e3`
+**legalMoveStyle** | string | `lichess` | Legal-destination geometry: `lichess` or `chess.com`
+**userHighlights** | string | *(none)* | Comma-separated `square:color:palette` values, e.g., `e4:green:lichess,d5:red:chess.com`
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `chess-com`, `random` (generate one on the fly)
@@ -65,6 +68,37 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 ![example board image](https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/PpP5/6PK/8/8&lastMove=f4g6&check=h8&arrows=Ge6g8,Bh7&squares=a3,c3)
 
 ### `GET /board.png` render a PNG
+
+Accepts the same query parameters as `/board.svg`.
+
+### `GET /board.annotations.json` return overlay annotations
+
+Accepts the same query parameters as `/board.svg`. Coordinates use the rendered
+image's pixel coordinate system. Arrow entries additionally include their anchor
+box, ordered tail/head points, and oriented bounds.
+
+```json
+{
+  "width": 360,
+  "height": 360,
+  "overlays": [
+    {
+      "kind": "arrow",
+      "color": "green",
+      "bbox_xyxy": [178.332893, 201.279052, 219.289822, 297.023014],
+      "anchor_bbox_xyxy": [188.4375, 202.851562, 216.5625, 223.945312],
+      "tail_xy": [202.5, 292.5],
+      "head_xy": [202.5, 202.5],
+      "obb_xyxyxyxy": [
+        [219.289822, 205.30861],
+        [205.868202, 297.023014],
+        [178.332893, 292.993457],
+        [191.754514, 201.279052]
+      ]
+    }
+  ]
+}
+```
 
 ### `GET /piece.svg` and `/piece.png` render a piece
 
