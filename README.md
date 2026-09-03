@@ -71,7 +71,7 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 
 Accepts the same query parameters as `/board.svg`.
 
-### `GET /board.annotations.json` return overlay annotations
+**`GET /board.annotations.json` returns overlay annotations.**
 
 Accepts the same query parameters as `/board.svg`. Coordinates use the rendered
 image's pixel coordinate system. Arrow entries additionally include their anchor
