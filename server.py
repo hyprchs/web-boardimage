@@ -144,10 +144,10 @@ THEMES = {
 }
 
 
-def generate_random_color():
-    h = random.random()
-    s = random.uniform(0.5, 1.0)
-    v = random.uniform(0.5, 1.0)
+def generate_random_color(rng=random):
+    h = rng.random()
+    s = rng.uniform(0.5, 1.0)
+    v = rng.uniform(0.5, 1.0)
     return colorsys.hsv_to_rgb(h, s, v)
 
 
@@ -169,8 +169,8 @@ def shift_hue(color, shift):
     return colorsys.hsv_to_rgb(h, s, v)
 
 
-def generate_color_scheme():
-    light_square_color = generate_random_color()
+def generate_color_scheme(rng=random):
+    light_square_color = generate_random_color(rng)
     dark_square_color = adjust_brightness(
         light_square_color, 0.7
     )  # Darker than light square
@@ -274,7 +274,14 @@ class Service:
 
         try:
             if request.query.get("colors") == "random":
-                colors = generate_color_scheme()
+                color_seed = request.query.get("colorSeed")
+                try:
+                    rng = random.Random(int(color_seed)) if color_seed is not None else random
+                except ValueError:
+                    raise aiohttp.web.HTTPBadRequest(
+                        reason="colorSeed must be an integer"
+                    ) from None
+                colors = generate_color_scheme(rng)
             else:
                 colors = THEMES[request.query.get("colors", "lichess-brown")]
         except KeyError:

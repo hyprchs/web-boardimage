@@ -54,6 +54,7 @@ name | type | default | description
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `chess-com`, `random` (generate one on the fly)
+**colorSeed** | int | *(none)* | Make `colors=random` deterministic for a given seed
 **pieceSet** | string | `cburnett` | Optional piece set; see [supported piece sets](#supported-piece-sets)
 **avoidMono** | bool | *false* | Exclude `mono` when `pieceSet=random`
 
