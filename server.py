@@ -326,9 +326,9 @@ class Service:
             }
             if annotation.color is not None:
                 payload["color"] = annotation.color
-            if annotation.anchor_bbox_xyxy is not None:
-                payload["anchor_bbox_xyxy"] = [
-                    round(value * scale, 6) for value in annotation.anchor_bbox_xyxy
+            if annotation.arrowhead_bbox_xyxy is not None:
+                payload["arrowhead_bbox_xyxy"] = [
+                    round(value * scale, 6) for value in annotation.arrowhead_bbox_xyxy
                 ]
             if annotation.tail_xy is not None:
                 payload["tail_xy"] = [round(value * scale, 6) for value in annotation.tail_xy]

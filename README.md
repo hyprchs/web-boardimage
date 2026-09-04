@@ -74,8 +74,8 @@ Accepts the same query parameters as `/board.svg`.
 **`GET /board.annotations.json` returns overlay annotations.**
 
 Accepts the same query parameters as `/board.svg`. Coordinates use the rendered
-image's pixel coordinate system. Arrow entries additionally include their anchor
-box, ordered tail/head points, and oriented bounds.
+image's pixel coordinate system. Arrow entries additionally include their
+arrowhead box, ordered tail/head points, and oriented bounds.
 
 ```json
 {
@@ -86,7 +86,7 @@ box, ordered tail/head points, and oriented bounds.
       "kind": "arrow",
       "color": "green",
       "bbox_xyxy": [178.332893, 201.279052, 219.289822, 297.023014],
-      "anchor_bbox_xyxy": [188.4375, 202.851562, 216.5625, 223.945312],
+      "arrowhead_bbox_xyxy": [188.4375, 202.851562, 216.5625, 223.945312],
       "tail_xy": [202.5, 292.5],
       "head_xy": [202.5, 202.5],
       "obb_xyxyxyxy": [
