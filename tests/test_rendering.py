@@ -240,8 +240,8 @@ def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
     assert response["overlays"][3]["head_xy"] == [202.5, 202.5]
     _, _, svg_data = get_response(request_url("/board.svg", **query))
     assert b'class="user-highlight chess-com"' in svg_data
-    anchor_bbox = response["overlays"][3]["anchor_bbox_xyxy"]
-    assert anchor_bbox[3] - anchor_bbox[1] < BOARD_SIZE / 8
+    arrowhead_bbox = response["overlays"][3]["arrowhead_bbox_xyxy"]
+    assert arrowhead_bbox[3] - arrowhead_bbox[1] < BOARD_SIZE / 8
     arrow_obb = response["overlays"][3]["obb_xyxyxyxy"]
     assert len(arrow_obb) == 4
     assert all(len(point) == 2 for point in arrow_obb)
