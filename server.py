@@ -270,6 +270,19 @@ class Service:
         except ValueError:
             raise aiohttp.web.HTTPBadRequest(reason="invalid squares")
 
+        try:
+            ghost_values = request.query.getall("ghostSquares", [])
+            ghost_squares = (
+                [chess.parse_square(value.strip()) for value in ghost_values[0].split(",")]
+                if ghost_values else []
+            )
+            if len(ghost_values) > 1 or len(set(ghost_squares)) != len(ghost_squares):
+                raise ValueError("duplicate ghost squares")
+        except ValueError:
+            raise aiohttp.web.HTTPBadRequest(
+                reason="ghostSquares must be one comma-separated list of distinct square names"
+            ) from None
+
         orientation = chess.BLACK if request.query.get("orientation", "white") == "black" else chess.WHITE
 
         coordinates = query_bool(request, "coordinates")
@@ -306,6 +319,7 @@ class Service:
                 legal_moves=legal_moves,
                 legal_move_style=legal_move_style,
                 user_highlights=user_highlights,
+                ghost_squares=ghost_squares,
             )
         except (TypeError, ValueError) as error:
             raise aiohttp.web.HTTPBadRequest(reason=str(error)) from None
