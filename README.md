@@ -55,6 +55,7 @@ name | type | default | description
 **legalMoveStyle** | string | `lichess` | Legal-destination geometry: `lichess` or `chess.com`
 **userHighlights** | string | *(none)* | Comma-separated `square:color:palette` values, e.g., `e4:green:lichess,d5:red:chess.com`
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
+**ghostSquares** | string | *(none)* | Distinct occupied squares rendered as Lichess drag ghosts at 0.3 opacity, e.g., `d4`; empty/invalid/duplicate names or repeated parameters are rejected
 **coordinates** | bool | *false* | Show a coordinate margin
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `chess-com`, `random` (generate one on the fly)
 **randomSeed** | int | *(none)* | Make all randomized choices deterministic for a given seed
@@ -71,11 +72,22 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 
 Accepts the same query parameters as `/board.svg`.
 
+`ghostSquares` uses the same `pieceSet` assets as ordinary pieces. The pinned
+python-chess renderer composites the ghosts once above board overlays; this
+adapter does not draw or fade pieces itself. Ghosts change appearance only,
+not the supplied FEN or semantic overlay annotations. Omit the parameter when
+there are no ghosts.
+
 **`GET /board.annotations.json` returns overlay annotations.**
 
 Accepts the same query parameters as `/board.svg`. Coordinates use the rendered
 image's pixel coordinate system. Arrow entries additionally include their
-arrowhead box, ordered tail/head points, and oriented bounds.
+arrowhead box, painted tail/head points, and oriented bounds, all supplied by
+the pinned python-chess renderer. For directed arrows, `head_xy` is the painted
+triangular tip; `tail_xy` is the rear end of the painted shaft on its centerline
+(including a Lichess round cap, or the first leg of a Chess.com knight arrow).
+These points are not logical square centers. Legacy same-square circles retain
+center points and omit the arrowhead box.
 
 ```json
 {
@@ -85,15 +97,15 @@ arrowhead box, ordered tail/head points, and oriented bounds.
     {
       "kind": "arrow",
       "color": "green",
-      "bbox_xyxy": [178.332893, 201.279052, 219.289822, 297.023014],
+      "bbox_xyxy": [188.4375, 202.851562, 216.5625, 296.015625],
       "arrowhead_bbox_xyxy": [188.4375, 202.851562, 216.5625, 223.945312],
-      "tail_xy": [202.5, 292.5],
-      "head_xy": [202.5, 202.5],
+      "tail_xy": [202.5, 296.015625],
+      "head_xy": [202.5, 202.851562],
       "obb_xyxyxyxy": [
-        [219.289822, 205.30861],
-        [205.868202, 297.023014],
-        [178.332893, 292.993457],
-        [191.754514, 201.279052]
+        [188.4375, 296.015625],
+        [188.4375, 202.851562],
+        [216.5625, 202.851562],
+        [216.5625, 296.015625]
       ]
     }
   ]

@@ -236,7 +236,7 @@ def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
     ]
     assert response["overlays"][2]["color"] == "red"
     assert response["overlays"][3]["color"] == "green"
-    assert response["overlays"][3]["tail_xy"] == [202.5, 292.5]
+    assert response["overlays"][3]["tail_xy"] == [202.5, 276.3]
     assert response["overlays"][3]["head_xy"] == [202.5, 202.5]
     _, _, svg_data = get_response(request_url("/board.svg", **query))
     assert b'class="user-highlight chess-com"' in svg_data
@@ -249,6 +249,89 @@ def test_board_annotations_are_renderer_authoritative_and_scaled_to_png():
         left, top, right, bottom = overlay["bbox_xyxy"]
         assert 0 <= left < right <= BOARD_SIZE
         assert 0 <= top < bottom <= BOARD_SIZE
+
+
+@pytest.mark.parametrize("arrow_style", ["lichess", "chess.com"])
+@pytest.mark.parametrize("arrow", ["Ge2e4", "Bb1c3", "Re4b5"])
+@pytest.mark.parametrize("orientation,coordinates", [("white", "false"), ("black", "true")])
+@pytest.mark.parametrize("size", [320, 640, 960])
+def test_painted_arrow_landmarks_agree_with_png(arrow_style, arrow, orientation, coordinates, size):
+    query = {
+        "fen": EMPTY_FEN, "size": size, "arrowStyle": arrow_style,
+        "orientation": orientation, "coordinates": coordinates,
+    }
+    status, _, background = get_response(request_url("/board.png", **query))
+    assert status == 200
+    query["arrows"] = arrow
+    status, _, png = get_response(request_url("/board.png", **query))
+    assert status == 200
+    status, _, payload = get_response(request_url("/board.annotations.json", **query))
+    assert status == 200
+    annotation, = json.loads(payload)["overlays"]
+    image = decode_png(png)
+    assert image.size == (size, size)
+    difference = ImageChops.difference(image, decode_png(background)).convert("RGB")
+    # Both endpoints must touch painted pixels, allowing the rasterizer's edge antialiasing.
+    for name in ("head_xy", "tail_xy"):
+        x, y = annotation[name]
+        assert difference.crop((round(x) - 2, round(y) - 2, round(x) + 3, round(y) + 3)).getbbox()
+    changed = difference.getbbox()
+    assert changed is not None
+    assert all(
+        abs(actual - expected) <= 2
+        for actual, expected in zip(changed, annotation["bbox_xyxy"], strict=True)
+    )
+
+
+def test_same_square_circles_do_not_claim_painted_arrow_keypoints():
+    status, _, payload = get_response(
+        request_url("/board.annotations.json", fen=EMPTY_FEN, arrows="Ge4", size=360)
+    )
+    assert status == 200
+    annotation, = json.loads(payload)["overlays"]
+    assert annotation["head_xy"] == annotation["tail_xy"]
+    assert "arrowhead_bbox_xyxy" not in annotation
+
+
+@pytest.mark.parametrize("piece_set", ["cburnett", "dubrovny"])
+@pytest.mark.parametrize("orientation", ["white", "black"])
+def test_ghost_squares_fade_complete_custom_piece_and_preserve_annotations(piece_set, orientation):
+    query = {
+        "fen": PAWN_FEN, "pieceSet": piece_set, "orientation": orientation,
+        "size": 360, "arrows": "Ga4h4", "userHighlights": "e4:red:lichess",
+    }
+    without_piece = {**query, "fen": EMPTY_FEN}
+    status, _, background = get_response(request_url("/board.png", **without_piece))
+    assert status == 200
+    status, _, sprite = get_response(request_url("/piece.png", piece="P", pieceSet=piece_set, size=45))
+    assert status == 200
+    expected = decode_png(background)
+    faded_piece = decode_png(sprite)
+    faded_piece.putalpha(faded_piece.getchannel("A").point(lambda alpha: round(alpha * 0.3)))
+    origin = (180, 180) if orientation == "white" else (135, 135)
+    expected.alpha_composite(faded_piece, origin)
+    status, _, png = get_response(request_url("/board.png", **query, ghostSquares="e4"))
+    assert status == 200
+    # One transparency layer over the whole piece, AFTER the arrow/highlight.
+    difference = ImageChops.difference(decode_png(png), expected)
+    assert max(high for _, high in difference.getextrema()) <= 2
+    status, _, svg_data = get_response(request_url("/board.svg", **query, ghostSquares="e4"))
+    assert status == 200
+    root = ElementTree.fromstring(svg_data)  # noqa: S314 - local test-app response
+    assert root[-1].attrib == {"class": "ghosts", "opacity": "0.3"}
+    assert root[-1][0].attrib["href"] == "#piece-wP"
+    ordinary = get_response(request_url("/board.annotations.json", **query))
+    ghost = get_response(request_url("/board.annotations.json", **query, ghostSquares="e4"))
+    assert ordinary == ghost
+
+
+@pytest.mark.parametrize("path", ["/board.svg", "/board.png", "/board.annotations.json"])
+@pytest.mark.parametrize("ghost_squares", ["d4", "i9", "", "e4,", "e4,e4", "e4&ghostSquares=e4"])
+def test_ghost_squares_reject_empty_unoccupied_invalid_and_duplicate_requests(path, ghost_squares):
+    # The final case deliberately repeats the HTTP parameter rather than a list item.
+    url = request_url(path, fen=PAWN_FEN) + "&ghostSquares=" + ghost_squares
+    status, _, _ = get_response(url)
+    assert status == 400
 
 
 @pytest.mark.parametrize(
