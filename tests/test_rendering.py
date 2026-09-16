@@ -108,6 +108,59 @@ def test_board_png_changes_only_the_piece_square(orientation, square_origin):
     assert y <= top < bottom <= y + SQUARE_SIZE
 
 
+@pytest.mark.parametrize("style", ["lichess", "chess.com"])
+@pytest.mark.parametrize("orientation", ["white", "black"])
+@pytest.mark.parametrize("coordinates", ["false", "true"])
+def test_explicit_destination_markers_match_legal_moves(style, orientation, coordinates):
+    query = dict(fen=LEGAL_HINT_FEN, size=720, orientation=orientation,
+                 coordinates=coordinates, legalMoveStyle=style)
+    for path in ("/board.png", "/board.annotations.json"):
+        derived_status, _, derived = get_response(
+            request_url(path, **query, legalMoves="e4d6,e4f6")
+        )
+        explicit_status, _, explicit = get_response(
+            request_url(path, **query, destinationMarkers="d6:dot,f6:capture")
+        )
+        assert derived_status == explicit_status == 200
+        if path.endswith(".png"):
+            assert decode_png(explicit).tobytes() == decode_png(derived).tobytes()
+        else:
+            assert json.loads(explicit) == json.loads(derived)
+
+
+@pytest.mark.parametrize("path", ["/board.svg", "/board.png", "/board.annotations.json"])
+def test_explicit_destination_markers_do_not_require_legal_moves_or_occupancy(path):
+    status, _, payload = get_response(request_url(
+        path, fen=PAWN_FEN, destinationMarkers="e4:dot,f6:capture",
+    ))
+    assert status == 200
+    if path.endswith(".json"):
+        assert [value["kind"] for value in json.loads(payload)["overlays"]] == [
+            "legal_destination_dot", "legal_destination_capture",
+        ]
+    elif path.endswith(".svg"):
+        assert b'class="legal-destination lichess dot"' in payload
+        assert b'class="legal-destination lichess capture"' in payload
+
+
+@pytest.mark.parametrize("path", ["/board.svg", "/board.png", "/board.annotations.json"])
+@pytest.mark.parametrize("markers", [
+    "", "e4", "a9:dot", "e4:ring", "e4:dot,", "e4:dot:extra",
+    "e4:dot,e4:dot", "e4:dot,e4:capture",
+])
+def test_explicit_destination_markers_reject_malformed_or_duplicate_values(path, markers):
+    assert get_response(request_url(path, fen=EMPTY_FEN, destinationMarkers=markers))[0] == 400
+
+
+@pytest.mark.parametrize("path", ["/board.svg", "/board.png", "/board.annotations.json"])
+def test_explicit_destination_markers_reject_repeated_parameters_and_mixed_inputs(path):
+    url = request_url(path, fen=EMPTY_FEN, destinationMarkers="e4:dot")
+    assert get_response(url + "&destinationMarkers=f6:capture")[0] == 400
+    assert get_response(request_url(
+        path, fen=LEGAL_HINT_FEN, destinationMarkers="f6:capture", legalMoves="e4d6",
+    ))[0] == 400
+
+
 def test_dubrovny_piece_png_is_visible_at_requested_size():
     status, content_type, png_data = get_response(
         request_url(
