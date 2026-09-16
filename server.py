@@ -248,6 +248,22 @@ class Service:
             raise aiohttp.web.HTTPBadRequest(reason="legalMoves contains an invalid uci move")
 
         try:
+            marker_values = request.query.getall("destinationMarkers", [])
+            if len(marker_values) > 1:
+                raise ValueError("repeated destinationMarkers")
+            destination_markers = []
+            if marker_values:
+                for token in marker_values[0].split(","):
+                    square_name, kind = token.strip().split(":")
+                    destination_markers.append(
+                        svg.DestinationMarker(chess.parse_square(square_name), kind)
+                    )
+        except (TypeError, ValueError):
+            raise aiohttp.web.HTTPBadRequest(
+                reason="destinationMarkers must be one comma-separated list of square:dot or square:capture tokens"
+            ) from None
+
+        try:
             user_highlights = []
             for token in request.query.get("userHighlights", "").split(","):
                 if not token.strip():
@@ -317,6 +333,7 @@ class Service:
                 colors=colors,
                 piece_set=piece_set,
                 legal_moves=legal_moves,
+                destination_markers=destination_markers,
                 legal_move_style=legal_move_style,
                 user_highlights=user_highlights,
                 ghost_squares=ghost_squares,

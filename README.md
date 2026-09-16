@@ -52,7 +52,8 @@ name | type | default | description
 **arrows** | string | *(none)* | Draw arrows and circles, e.g., `Ge6g8,Bh7`, possible color prefixes: `G`, `B`, `R`, `Y`
 **arrowStyle** | string | `lichess` | Arrow geometry: `lichess` or `chess.com`
 **legalMoves** | string | *(none)* | Comma-separated legal UCI moves with one source square, e.g., `e2e4,e2e3`
-**legalMoveStyle** | string | `lichess` | Legal-destination geometry: `lichess` or `chess.com`
+**destinationMarkers** | string | *(none)* | Explicit `square:dot` / `square:capture` markers, e.g., `e4:dot,f6:capture`; distinct squares, no legality or occupancy checks; cannot combine with nonempty `legalMoves`
+**legalMoveStyle** | string | `lichess` | Destination geometry for both inputs: `lichess` or `chess.com`
 **userHighlights** | string | *(none)* | Comma-separated `square:color:palette` values, e.g., `e4:green:lichess,d5:red:chess.com`
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **ghostSquares** | string | *(none)* | Distinct occupied squares rendered as Lichess drag ghosts at 0.3 opacity, e.g., `d4`; empty/invalid/duplicate names or repeated parameters are rejected
@@ -71,6 +72,15 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 ### `GET /board.png` render a PNG
 
 Accepts the same query parameters as `/board.svg`.
+
+Use `destinationMarkers` for observed dots/rings when the source move or turn is
+unknown. The FEN still supplies the displayed pieces, but the renderer honors the
+explicit marker kind even for a dot on an occupied square or a capture ring on an
+empty one. Both marker inputs share the pinned python-chess SVG primitives and
+existing `legal_destination_dot` / `legal_destination_capture` bbox annotations.
+Duplicate squares, repeated parameters, empty/malformed tokens, and combining
+explicit markers with nonempty `legalMoves` return HTTP 400. Omit the parameter
+when there are no explicit markers. Annotation/editor state stays with the caller.
 
 `ghostSquares` uses the same `pieceSet` assets as ordinary pieces. The pinned
 python-chess renderer composites the ghosts once above board overlays; this
