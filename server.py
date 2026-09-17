@@ -334,6 +334,7 @@ class Service:
                 arrow_style=arrow_style,
                 squares=squares,
                 size=size,
+                css_size=float(request.query["cssSize"]) if "cssSize" in request.query else None,
                 colors=colors,
                 piece_set=piece_set,
                 legal_moves=legal_moves,
