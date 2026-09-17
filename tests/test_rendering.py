@@ -439,4 +439,8 @@ def test_inboard_coordinates(style, orientation):
 
 
 def test_invalid_coordinate_style():
-    assert get_response(request_url("/board.svg", coordinateStyle="unknown"))[0] == 400
+    status, _, body = get_response(
+        request_url("/board.svg", fen=PAWN_FEN, coordinateStyle="unknown")
+    )
+    assert status == 400
+    assert b"coordinateStyle is not supported" in body
