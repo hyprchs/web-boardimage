@@ -4,6 +4,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
+# Chess.com coordinates use a system sans-serif font.
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-liberation2 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.2 /uv /uvx /bin/

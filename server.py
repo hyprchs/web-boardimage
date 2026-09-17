@@ -302,6 +302,9 @@ class Service:
         orientation = chess.BLACK if request.query.get("orientation", "white") == "black" else chess.WHITE
 
         coordinates = query_bool(request, "coordinates")
+        coordinate_style = request.query.get("coordinateStyle", "lichess")
+        if coordinate_style not in ("lichess", "chess.com"):
+            raise aiohttp.web.HTTPBadRequest(reason="coordinateStyle is not supported")
         arrow_style = request.query.get("arrowStyle", "lichess")
         if arrow_style not in ("lichess", "chess.com"):
             raise aiohttp.web.HTTPBadRequest(reason="arrowStyle is not supported")
@@ -323,6 +326,7 @@ class Service:
             rendered = svg.board_with_annotations(
                 board,
                 coordinates=coordinates,
+                coordinate_style=coordinate_style,
                 orientation=orientation,
                 lastmove=lastmove,
                 check=check,
