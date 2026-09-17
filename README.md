@@ -57,7 +57,8 @@ name | type | default | description
 **userHighlights** | string | *(none)* | Comma-separated `square:color:palette` values, e.g., `e4:green:lichess,d5:red:chess.com`
 **squares** | string | *(none)* | Marked squares, e.g., `a3,c3`
 **ghostSquares** | string | *(none)* | Distinct occupied squares rendered as Lichess drag ghosts at 0.3 opacity, e.g., `d4`; empty/invalid/duplicate names or repeated parameters are rejected
-**coordinates** | bool | *false* | Show a coordinate margin
+**coordinates** | bool | *false* | Show coordinates inside the board (no gutter)
+**coordinateStyle** | string | `lichess` | Coordinate layout: `lichess` (Noto Sans Bold) or `chess.com` (system sans-serif)
 **colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `chess-com`, `random` (generate one on the fly)
 **randomSeed** | int | *(none)* | Make all randomized choices deterministic for a given seed
 **pieceSet** | string | `cburnett` | Optional piece set; see [supported piece sets](#supported-piece-sets)

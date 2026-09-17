@@ -417,3 +417,30 @@ def test_invalid_request_returns_bad_request(path, query):
     status, _, _ = get_response(request_url(path, **query))
 
     assert status == 400
+
+
+@pytest.mark.parametrize("style", ["lichess", "chess.com"])
+@pytest.mark.parametrize("orientation", ["white", "black"])
+def test_inboard_coordinates(style, orientation):
+    query = dict(fen=PAWN_FEN, size=640, orientation=orientation, coordinateStyle=style)
+    plain = get_response(request_url("/board.png", **query))[2]
+    status, _, annotated = get_response(request_url("/board.png", **query, coordinates="true"))
+    assert status == 200
+    assert decode_png(plain).size == decode_png(annotated).size == (640, 640)
+    assert plain != annotated
+    _, _, svg = get_response(request_url("/board.svg", **query, coordinates="true"))
+    root = ElementTree.fromstring(svg)
+    assert root.get("viewBox") == "0 0 360 360"
+    coords = next(e for e in root if e.get("class") == f"coordinates {style}")
+    assert len(coords) == 16
+    assert get_response(request_url("/board.annotations.json", **query))[2] == get_response(
+        request_url("/board.annotations.json", **query, coordinates="true")
+    )[2]
+
+
+def test_invalid_coordinate_style():
+    status, _, body = get_response(
+        request_url("/board.svg", fen=PAWN_FEN, coordinateStyle="unknown")
+    )
+    assert status == 400
+    assert b"coordinateStyle is not supported" in body
