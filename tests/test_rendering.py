@@ -447,15 +447,21 @@ def test_invalid_coordinate_style():
 
 
 def test_capture_css_size_preserves_output_size_and_bounds():
-    query = dict(fen=EMPTY_FEN, size=640, cssSize=616, coordinates="false",
+    query = dict(fen=EMPTY_FEN, size=640, cssSize=616, devicePixelRatio=2, coordinates="false",
                  destinationMarkers="e4:capture", legalMoveStyle="chess.com")
     status, _, data = get_response(request_url("/board.svg", **query))
     assert status == 200
     svg = ElementTree.fromstring(data)
     circle = svg.find(".//{http://www.w3.org/2000/svg}circle")
-    assert float(circle.get("stroke-width")) * 616 / 360 == pytest.approx(6.7)
+    assert float(circle.get("stroke-width")) * 616 / 360 == pytest.approx(6.5)
     assert svg.get("width") == "640"
     _, _, data = get_response(request_url("/board.annotations.json", **query))
     assert json.loads(data)["overlays"][0]["bbox_xyxy"] == [320, 320, 400, 400]
     for invalid in ("bad", "0", "-1", "nan", "inf"):
         assert get_response(request_url("/board.svg", **{**query, "cssSize": invalid}))[0] == 400
+
+
+def test_capture_rejects_invalid_pixel_ratio():
+    for value in ("bad", "0", "-1", "17", "nan", "inf"):
+        status, _, _ = get_response(request_url("/board.svg", fen=EMPTY_FEN, devicePixelRatio=value))
+        assert status == 400

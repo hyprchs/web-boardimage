@@ -48,6 +48,7 @@ name | type | default | description
 **orientation** | string | white | `white` or `black`
 **size** | int | 360 | The width and height of the image
 **cssSize** | float | *size* | Positive, finite logical board size in CSS pixels for size-dependent Chess.com capture rings; image size and annotation coordinates are unchanged
+**devicePixelRatio** | float | 1 | CSS device-pixel scale in (0, 16] for Chromium capture-border snapping; does not change output dimensions
 **lastMove** | string | *(none)* | The last move to highlight, e.g., `f4g6`
 **check** | string | *(none)* | A square to highlight for check, e.g., `h8`
 **arrows** | string | *(none)* | Draw arrows and circles, e.g., `Ge6g8,Bh7`, possible color prefixes: `G`, `B`, `R`, `Y`
