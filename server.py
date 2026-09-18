@@ -150,6 +150,14 @@ THEMES = {
     for name in ["wikipedia", "lichess-blue", "lichess-brown", "chess-com"]
 }
 
+# Preserve foreground colors, including the coordinate color inherited from light squares.
+THEMES["transparent"] = {
+    **THEMES["lichess-brown"],
+    "coord light": THEMES["lichess-brown"]["square light"],
+    "square light": "#00000000",
+    "square dark": "#00000000",
+}
+
 
 def generate_random_color(rng=random):
     h = rng.random()

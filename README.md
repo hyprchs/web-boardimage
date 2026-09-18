@@ -59,7 +59,7 @@ name | type | default | description
 **ghostSquares** | string | *(none)* | Distinct occupied squares rendered as Lichess drag ghosts at 0.3 opacity, e.g., `d4`; empty/invalid/duplicate names or repeated parameters are rejected
 **coordinates** | bool | *false* | Show coordinates inside the board (no gutter)
 **coordinateStyle** | string | `lichess` | Coordinate layout: `lichess` (Noto Sans Bold) or `chess.com` (system sans-serif)
-**colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `chess-com`, `random` (generate one on the fly)
+**colors** | string | lichess-brown | Theme: `wikipedia`, `lichess-brown`, `lichess-blue`, `chess-com`, `transparent` (no square background), `random` (generate one on the fly)
 **randomSeed** | int | *(none)* | Make all randomized choices deterministic for a given seed
 **pieceSet** | string | `cburnett` | Optional piece set; see [supported piece sets](#supported-piece-sets)
 **avoidMono** | bool | *false* | Exclude `mono` when `pieceSet=random`
@@ -73,6 +73,13 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 ### `GET /board.png` render a PNG
 
 Accepts the same query parameters as `/board.svg`.
+
+Use `colors=transparent` to render pieces and overlays without the square
+background, retaining the default Lichess-brown foreground colors for last-move
+highlights and coordinates. With an empty FEN and coordinates off (the default), this produces
+transparent overlay artwork. `/board.annotations.json` supplies the same bounds
+as an ordinary board, so callers can crop individual markers without recreating
+their geometry.
 
 Use `destinationMarkers` for observed dots/rings when the source move or turn is
 unknown. The FEN still supplies the displayed pieces, but the renderer honors the

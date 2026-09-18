@@ -444,3 +444,46 @@ def test_invalid_coordinate_style():
     )
     assert status == 400
     assert b"coordinateStyle is not supported" in body
+
+
+@pytest.mark.parametrize("style", ["lichess", "chess.com"])
+def test_transparent_theme_preserves_artwork_and_annotations(style):
+    query = dict(fen=EMPTY_FEN, size=640)
+    status, _, empty = get_response(request_url("/board.png", **query, colors="transparent"))
+    assert status == 200
+    assert decode_png(empty).getchannel("A").getbbox() is None
+
+    status, _, background = get_response(request_url("/board.png", **query))
+    assert status == 200
+    query.update(fen=PAWN_FEN, destinationMarkers="d4:dot,f4:capture",
+                 legalMoveStyle=style, userHighlights=f"e5:green:{style}",
+                 lastMove="e2e4", coordinates="true", coordinateStyle=style)
+    status, _, transparent = get_response(request_url("/board.png", **query, colors="transparent"))
+    assert status == 200
+    artwork = decode_png(transparent)
+    assert artwork.getpixel((0, 0))[3] == 0
+    assert artwork.getchannel("A").getbbox() is not None
+    status, _, opaque = get_response(request_url("/board.png", **query))
+    assert status == 200
+    composited = Image.alpha_composite(decode_png(background), artwork)
+    difference = ImageChops.difference(composited, decode_png(opaque))
+    # Rasterizing over a background vs compositing later can round channels differently.
+    assert max(high for low, high in difference.getextrema()) <= 2
+    status, _, transparent_boxes = get_response(request_url(
+        "/board.annotations.json", **query, colors="transparent"))
+    assert status == 200
+    status, _, opaque_boxes = get_response(request_url("/board.annotations.json", **query))
+    assert status == 200
+    assert json.loads(transparent_boxes) == json.loads(opaque_boxes)
+
+    foreground = []
+    for theme in ("lichess-brown", "transparent"):
+        status, _, svg_data = get_response(request_url("/board.svg", **query, colors=theme))
+        assert status == 200
+        root = ElementTree.fromstring(svg_data)
+        foreground.append([
+            ElementTree.tostring(node) for node in root
+            if {"lastmove", "coordinates"} & set(node.attrib.get("class", "").split())
+        ])
+    assert len(foreground[0]) >= 3  # Both last-move squares and the coordinate group.
+    assert foreground[0] == foreground[1]
