@@ -75,7 +75,8 @@ https://backscattering.de/web-boardimage/board.svg?fen=5r1k/1b4pp/3pB1N1/p2Pq2Q/
 Accepts the same query parameters as `/board.svg`.
 
 Use `colors=transparent` to render pieces and overlays without the square
-background. With an empty FEN and coordinates off (the default), this produces
+background, retaining the default Lichess-brown foreground colors for last-move
+highlights and coordinates. With an empty FEN and coordinates off (the default), this produces
 transparent overlay artwork. `/board.annotations.json` supplies the same bounds
 as an ordinary board, so callers can crop individual markers without recreating
 their geometry.
